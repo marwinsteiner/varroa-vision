@@ -45,7 +45,7 @@ def iter_tracked_bees(bee_model, source, imgsz: int = 640, conf: float = 0.3, tr
     stream = bee_model.track(source=source, stream=True, persist=True, imgsz=imgsz, conf=conf, tracker=tracker, device=device, vid_stride=vid_stride, verbose=False)
     for frame_idx, r in enumerate(stream):
         boxes = r.boxes
-        if boxes is None or boxes.id is None or len(boxes) == 0:
+        if boxes is None or boxes.id is None or len(boxes.id) == 0:
             yield frame_idx, r.orig_img, []
             continue
         ids = boxes.id.int().tolist()

@@ -47,7 +47,7 @@ def test_crop_with_margin_clips_to_image():
     c = crop_with_margin(img, (0, 0, 50, 40), margin=0.5)
     assert c.shape == (60, 75, 3)  # margin pushes past the top-left edge, clipped at 0
     c2 = crop_with_margin(img, (180, 90, 200, 100), margin=0.5)
-    assert c2.shape == (10, 20, 3)
+    assert c2.shape == (15, 30, 3)  # grows up/left into the image, clipped at the bottom-right
 
 
 def test_scan_counts_bees_once_and_pools_mites():
