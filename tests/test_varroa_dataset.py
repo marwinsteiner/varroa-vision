@@ -102,6 +102,16 @@ def test_convert_date_split(raw_dir: Path, tmp_path: Path):
     assert stats["split_mode"] == "date"
 
 
+def test_convert_dedupes_repeated_rows(raw_dir: Path, tmp_path: Path):
+    with (raw_dir / "gt.csv").open("a") as fh:
+        fh.write("train/videos/2017-09-20_19-24-55/b.png 1 90 140 110 170\n")
+    out = tmp_path / "dedup"
+    vd.convert(raw_dir, out, "official", link=False)
+    stats = json.loads((out / "stats.json").read_text())
+    assert stats["train"]["images"] == 2
+    assert _labels(out, "train", "b") == [[0, 0.603125, 0.5625, 0.15625, 0.103571]]  # first row kept
+
+
 def test_convert_rejects_duplicate_names(raw_dir: Path, tmp_path: Path):
     dup = raw_dir / "test/videos/2017-09-01_10-54-26/a.png"
     dup.parent.mkdir(parents=True)

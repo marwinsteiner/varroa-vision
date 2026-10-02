@@ -21,6 +21,9 @@ https://doi.org/10.5281/zenodo.4085043 (record 4085044). GitHub: schurist/Varroa
   infected and keep the raw label in `meta.csv`.
 - 4,628 mite boxes in total, mean size 33 x 32 px. Infected bees carry 1 box (3,332),
   2 boxes (549) or 3 boxes (66). One box has zero width and is dropped.
+- Two train images (`bee_id_10000` and `bee_id_10001` of session 2017-08-30_15-42-59)
+  are listed twice, once with slightly different boxes. The converter keeps the first
+  row, so the converted dataset has 13,507 images.
 - Official splits: train 8,225 / test 3,408 / val 1,876, assigned per recording session.
 
 Caveat on the official splits: sessions recorded on the same day appear in different

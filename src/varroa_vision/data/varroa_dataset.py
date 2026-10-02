@@ -97,6 +97,18 @@ def parse_gt(gt_csv: Path) -> list[Sample]:
     return samples
 
 
+def dedupe(samples: list[Sample]) -> list[Sample]:
+    """Keep the first row per image path. gt.csv lists two train images twice (once with
+    slightly different boxes), so the dataset has 13,507 unique images, not 13,509."""
+    seen: dict[str, Sample] = {}
+    for s in samples:
+        if s.rel_path in seen:
+            logger.warning("duplicate row for {} (keeping first)", s.rel_path)
+            continue
+        seen[s.rel_path] = s
+    return list(seen.values())
+
+
 def clean_boxes(boxes: tuple[Box, ...], width: int, height: int) -> tuple[list[Box], int]:
     """Clip boxes to the image and drop degenerate ones. Returns (kept, n_dropped)."""
     kept: list[Box] = []
@@ -155,7 +167,7 @@ def convert(raw_dir: Path, out_dir: Path, split_mode: str = "official", link: bo
     """Build the YOLO dataset and return the path of its ``data.yaml``."""
     raw_dir, out_dir = Path(raw_dir), Path(out_dir)
     ensure_extracted(raw_dir)
-    samples = parse_gt(raw_dir / "gt.csv")
+    samples = dedupe(parse_gt(raw_dir / "gt.csv"))
     names = Counter(s.file_name for s in samples)
     dupes = [n for n, c in names.items() if c > 1]
     if dupes:
