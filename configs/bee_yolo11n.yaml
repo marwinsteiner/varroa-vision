@@ -1,0 +1,37 @@
+# Stage 1: single-class bee detector on BEEHIVE (frame + bottom subsets merged).
+# Starting point only: BEEHIVE images are 640x640 stretched in-hive camera frames, not
+# phone footage of a comb. Expect to fine-tune again on own recordings.
+
+model: yolo11n.pt
+data: datasets/beehive_bees/data.yaml
+project: runs/bee
+name: yolo11n_640_beehive
+
+imgsz: 640
+epochs: 50
+batch: 32
+patience: 15
+optimizer: auto
+lr0: 0.01
+cos_lr: true
+warmup_epochs: 3
+close_mosaic: 10
+seed: 0
+deterministic: true
+workers: 8
+plots: true
+
+# Bees on a comb face any direction; both flips are valid. Scale jitter is wide because
+# the phone-to-comb distance will vary far more than the fixed in-hive cameras did, and
+# the 640x640 stretch means the aspect ratio of a bee is not reliable.
+fliplr: 0.5
+flipud: 0.5
+degrees: 20.0
+scale: 0.5
+translate: 0.1
+hsv_h: 0.015
+hsv_s: 0.6
+hsv_v: 0.5
+mosaic: 1.0
+mixup: 0.0
+erasing: 0.0
