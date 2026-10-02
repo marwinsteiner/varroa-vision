@@ -12,10 +12,10 @@ coverage.xml
 .vscode/
 
 # data and training artefacts never go in git
-data/
-datasets/
-runs/
-weights/
+/data/
+/datasets/
+/runs/
+/weights/
 *.pt
 *.onnx
 *.tflite
