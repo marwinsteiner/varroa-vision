@@ -38,8 +38,9 @@ work and the open sampling-methodology question.
 ## Status
 
 - [x] Repo scaffold
-- [ ] Dataset download and conversion to YOLO format (VarroaDataset, EV2, BEEHIVE)
-- [ ] Stage 2: fine-tune mite detector, evaluate at box level and at bee level
+- [x] VarroaDataset download and conversion to YOLO format (official and date-grouped splits)
+- [ ] EV2 and BEEHIVE conversion
+- [ ] Stage 2: fine-tune mite detector, evaluate at box level and at bee level (training)
 - [ ] Stage 1: fine-tune bee detector on comb frames
 - [ ] Tracking + per-bee aggregation on video
 - [ ] Export to TFLite and build the Android app
