@@ -63,10 +63,23 @@ runs/                training outputs (gitignored)
 
 ```
 uv sync
-uv run python -m varroa_vision.data.zenodo varroa_dataset      # ~1.2 GB
+uv run python -m varroa_vision.data.zenodo varroa_dataset      # 1.2 GB
 uv run python -m varroa_vision.data.varroa_dataset             # -> datasets/varroa_mite
-uv run python -m varroa_vision.train --config configs/mite_yolo11n.yaml
+uv run python -m varroa_vision.train --config configs/mite_yolo11n.yaml --device 0
+uv run python -m varroa_vision.evaluate --weights runs/mite/yolo11n_320_official/weights/best.pt --split val
+uv run python -m varroa_vision.evaluate --weights ... --split test --conf <chosen on val>
+
+# cross-domain check on EV2 crops (bee-level only, no mite boxes there)
+uv run python -m varroa_vision.data.zenodo ev2                 # 1.1 GB
+uv run python -m varroa_vision.data.ev2                        # -> datasets/ev2_bees
+uv run python -m varroa_vision.evaluate --weights ... --data datasets/ev2_bees/data.yaml --split all --bee-only
+
+# mobile export
+uv sync --extra export-tflite
+uv run python -m varroa_vision.export --weights ... --formats tflite onnx
 ```
+
+Training on a machine without git: `scripts/deploy_lynx.sh user@host` pushes HEAD over ssh.
 
 ## License
 
