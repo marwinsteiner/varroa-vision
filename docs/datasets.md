@@ -41,16 +41,30 @@ Domain note: these are top-down crops of bees walking through a tunnel, not bees
 comb. The mite detector trained here must be re-validated on crops produced by the
 stage 1 bee detector on comb footage (EV2 provides exactly that kind of frame).
 
-## EV2 (stage 1: bee detector on frames, plus bee-level infestation labels)
+## EV2 (cross-domain bee-level test set for stage 2)
 
 EV2 Dataset (2024). Zenodo record 13771384, https://doi.org/10.5281/zenodo.13771384.
-Project "EdgeVision against Varroa", Italian MUR PRIN2022.
+Project "EdgeVision against Varroa", Italian MUR PRIN2022. One file, `dataset.zip`,
+1.08 GB, MD5 c626a1f198cf7d0f41eae9c2660b0985.
 
-- 5,170 images: 1,987 of healthy bees, 3,183 of infested bees.
-- Labels give a bounding box for each bee on the frame and whether the mite is visible in
-  that frame (a bee can be infested while the mite is hidden in a given frame). That
-  visibility flag is the per-frame label the tracker aggregation needs.
-- One file, `dataset.zip`, 1.08 GB. Internal format to be documented after inspection.
+Despite the Zenodo description, EV2 does not contain full frames. Every PNG is a crop of
+one bee, 180 to 740 px wide (typically about 470 x 390), cut from a 1920 x 1080 camcorder
+frame; consecutive frames of the same bee are consecutive crops.
+
+- 5,170 crops from 32 videos (9 to 874 crops per video), in `dataset_free/` (1,987) and
+  `dataset_infested/` (3,183). Files are named `<video>_frame<n>.png`.
+- `labels.txt` has one JSON object per line (with blank separator lines): `video`
+  (`varroa_infested/<id>.MTS` or `varroa_free/<id>.MTS`), `id` (`frame_<n>`),
+  `varroa_visible` (`yes`/`no`), `coord_1` and `coord_2` (the crop's top-left and
+  bottom-right corner in the source frame). Exactly one object per crop.
+- The folder encodes visibility, not health: `dataset_free` holds 1,288 crops from
+  mite-free videos plus 699 crops from infested videos in which the mite is hidden.
+- No mite boxes, so EV2 cannot train the detector. It is the right test of domain shift
+  at bee level (different camera, lighting, viewpoint and bee size from VarroaDataset):
+  does the stage 2 model fire on crops where a mite is visible and stay quiet otherwise.
+  `python -m varroa_vision.data.ev2` builds `datasets/ev2_bees` for
+  `python -m varroa_vision.evaluate --data datasets/ev2_bees/data.yaml --split all --bee-only`.
+- Group any split by `video`; frames within a video are near-duplicates.
 
 ## BEEHIVE (stage 1: bee detector inside the hive)
 

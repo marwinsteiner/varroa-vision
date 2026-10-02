@@ -44,14 +44,19 @@ def predict_split(model, data_yaml: Path, split: str, imgsz: int, device, batch:
 
 
 def bee_level_table(dets: pd.DataFrame, meta: pd.DataFrame, grid=DEFAULT_GRID) -> pd.DataFrame:
-    """Per-threshold confusion and count statistics. ``meta`` needs image, infected, n_boxes."""
+    """Per-threshold confusion and count statistics.
+
+    ``meta`` needs ``image`` and ``infected``; with ``n_boxes`` it also reports true mite
+    counts and the count error (datasets with only a bee-level flag, like EV2, lack it).
+    """
     meta = meta.set_index("image")
     missing = set(dets["image"]) - set(meta.index)
     if missing:
         raise KeyError(f"{len(missing)} predicted images not in meta.csv, e.g. {sorted(missing)[:3]}")
     n_bees = len(meta)
     true_pos_bees = meta["infected"].sum()
-    true_mites = meta["n_boxes"].sum()
+    has_counts = "n_boxes" in meta.columns
+    true_mites = meta["n_boxes"].sum() if has_counts else None
     rows = []
     for t in grid:
         hit = dets[dets["conf"] >= t]
@@ -66,38 +71,42 @@ def bee_level_table(dets: pd.DataFrame, meta: pd.DataFrame, grid=DEFAULT_GRID) -
         prec = tp / max(tp + fp, 1)
         f1 = 2 * prec * sens / max(prec + sens, 1e-9)
         pred_mites = int(n_det.sum())
-        rows.append(
-            {
-                "conf": float(t),
-                "tp": tp, "fp": fp, "fn": fn, "tn": tn,
-                "sensitivity": sens, "specificity": spec, "precision": prec, "f1": f1,
-                "bees": n_bees,
-                "infested_true": int(true_pos_bees),
-                "infested_pred": int(pred_inf.sum()),
-                "mites_true": int(true_mites),
-                "mites_pred": pred_mites,
-                "rate_true_per100": 100 * true_mites / n_bees,
-                "rate_pred_per100": 100 * pred_mites / n_bees,
-                "count_mae": float((n_det - meta["n_boxes"]).abs().mean()),
-            }
-        )
+        row = {
+            "conf": float(t),
+            "tp": tp, "fp": fp, "fn": fn, "tn": tn,
+            "sensitivity": sens, "specificity": spec, "precision": prec, "f1": f1,
+            "bees": n_bees,
+            "infested_true": int(true_pos_bees),
+            "infested_pred": int(pred_inf.sum()),
+            "mites_pred": pred_mites,
+            "rate_pred_per100": 100 * pred_mites / n_bees,
+        }
+        if has_counts:
+            row.update(
+                mites_true=int(true_mites),
+                rate_true_per100=100 * true_mites / n_bees,
+                count_mae=float((n_det - meta["n_boxes"]).abs().mean()),
+            )
+        rows.append(row)
     return pd.DataFrame(rows)
 
 
-def evaluate(weights: Path, data_yaml: Path, split: str, imgsz: int, device, batch: int, conf: float | None, out_dir: Path) -> dict:
+def evaluate(weights: Path, data_yaml: Path, split: str, imgsz: int, device, batch: int, conf: float | None, out_dir: Path, bee_only: bool = False) -> dict:
     from ultralytics import YOLO
 
     out_dir.mkdir(parents=True, exist_ok=True)
     model = YOLO(str(weights))
 
-    box = model.val(data=str(data_yaml), split=split, imgsz=imgsz, device=device, batch=batch, plots=False, verbose=False, project=str(out_dir), name="box", exist_ok=True)
-    box_metrics = {
-        "mAP50": float(box.box.map50),
-        "mAP50-95": float(box.box.map),
-        "precision": float(box.box.mp),
-        "recall": float(box.box.mr),
-    }
-    logger.info("box level ({}): {}", split, box_metrics)
+    box_metrics = None
+    if not bee_only:
+        box = model.val(data=str(data_yaml), split=split, imgsz=imgsz, device=device, batch=batch, plots=False, verbose=False, project=str(out_dir), name="box", exist_ok=True)
+        box_metrics = {
+            "mAP50": float(box.box.map50),
+            "mAP50-95": float(box.box.map),
+            "precision": float(box.box.mp),
+            "recall": float(box.box.mr),
+        }
+        logger.info("box level ({}): {}", split, box_metrics)
 
     meta = pd.read_csv(Path(data_yaml).parent / "meta.csv")
     meta = meta[meta["split"] == split]
@@ -118,7 +127,9 @@ def evaluate(weights: Path, data_yaml: Path, split: str, imgsz: int, device, bat
     }
     (out_dir / "summary.json").write_text(json.dumps(summary, indent=2))
     logger.info("bee level, best F1 at conf {:.2f}: sens {:.3f} spec {:.3f} prec {:.3f} F1 {:.3f}", best["conf"], best["sensitivity"], best["specificity"], best["precision"], best["f1"])
-    logger.info("rate per 100 bees at conf {:.2f}: true {:.2f} pred {:.2f}", chosen["conf"], chosen["rate_true_per100"], chosen["rate_pred_per100"])
+    logger.info("at conf {:.2f}: sens {:.3f} spec {:.3f} prec {:.3f} F1 {:.3f}; infested bees true {} pred {}", chosen["conf"], chosen["sensitivity"], chosen["specificity"], chosen["precision"], chosen["f1"], int(chosen["infested_true"]), int(chosen["infested_pred"]))
+    if "rate_true_per100" in chosen:
+        logger.info("mites per 100 bees at conf {:.2f}: true {:.2f} pred {:.2f}", chosen["conf"], chosen["rate_true_per100"], chosen["rate_pred_per100"])
     return summary
 
 
@@ -126,16 +137,17 @@ def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--weights", type=Path, required=True)
     parser.add_argument("--data", type=Path, default=Path("datasets/varroa_mite/data.yaml"))
-    parser.add_argument("--split", choices=("val", "test"), default="val")
+    parser.add_argument("--split", choices=("val", "test", "all"), default="val")
     parser.add_argument("--imgsz", type=int, default=320)
     parser.add_argument("--device", default=None)
     parser.add_argument("--batch", type=int, default=64)
     parser.add_argument("--conf", type=float, default=None, help="operating threshold to report; default best F1")
-    parser.add_argument("--out", type=Path, default=None, help="default runs/eval/<run>/<split>")
+    parser.add_argument("--bee-only", action="store_true", help="skip box metrics (dataset without mite boxes, e.g. EV2)")
+    parser.add_argument("--out", type=Path, default=None, help="default runs/eval/<run>/<dataset>_<split>")
     args = parser.parse_args(argv)
     run = args.weights.resolve().parent.parent.name
-    out = args.out or Path("runs/eval") / run / args.split
-    evaluate(args.weights, args.data, args.split, args.imgsz, args.device, args.batch, args.conf, out)
+    out = args.out or Path("runs/eval") / run / f"{args.data.resolve().parent.name}_{args.split}"
+    evaluate(args.weights, args.data, args.split, args.imgsz, args.device, args.batch, args.conf, out, bee_only=args.bee_only)
 
 
 if __name__ == "__main__":

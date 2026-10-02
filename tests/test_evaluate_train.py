@@ -58,6 +58,16 @@ def test_bee_level_table():
     assert high["f1"] == 1.0
 
 
+def test_bee_level_table_without_counts():
+    meta = pd.DataFrame({"image": ["a", "b"], "infected": [0, 1]})
+    dets = pd.DataFrame({"image": ["a", "b"], "conf": [np.nan, 0.7]})
+    table = bee_level_table(dets, meta, grid=np.array([0.5]))
+    row = table.iloc[0]
+    assert (row["tp"], row["fp"], row["fn"], row["tn"]) == (1, 0, 0, 1)
+    assert row["mites_pred"] == 1 and row["rate_pred_per100"] == pytest.approx(50.0)
+    assert "mites_true" not in table.columns and "count_mae" not in table.columns
+
+
 def test_bee_level_table_unknown_image():
     meta = pd.DataFrame({"image": ["a"], "infected": [0], "n_boxes": [0]})
     dets = pd.DataFrame({"image": ["zzz"], "conf": [0.5]})
