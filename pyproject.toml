@@ -17,6 +17,24 @@ dependencies = [
     "loguru>=0.7.3",
 ]
 
+[project.optional-dependencies]
+# ONNX export and CPU inference checks.
+export = [
+    "onnx>=1.16",
+    "onnxslim>=0.1.30",
+    "onnxruntime>=1.18",
+]
+# TFLite export goes through onnx2tf and TensorFlow; heavy, install only where exporting.
+export-tflite = [
+    "varroa-vision[export]",
+    "tensorflow>=2.16",
+    "tf_keras",
+    "onnx2tf>=1.26",
+    "onnx_graphsurgeon",
+    "sng4onnx",
+    "ai-edge-litert",
+]
+
 [project.urls]
 Repository = "https://github.com/marwinsteiner/varroa-vision"
 Issues = "https://github.com/marwinsteiner/varroa-vision/issues"

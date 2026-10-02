@@ -35,15 +35,25 @@ def _parse_set(items: list[str] | None) -> dict:
     return out
 
 
-def train(cfg: dict) -> dict:
-    """Run ultralytics training and return a summary dict with weights and metrics."""
+def train(cfg: dict, resume_from: Path | None = None) -> dict:
+    """Run ultralytics training and return a summary dict with weights and metrics.
+
+    With ``resume_from`` (a ``last.pt``), training continues from that checkpoint with the
+    arguments stored in it; ``cfg`` is ignored except for logging.
+    """
     from ultralytics import YOLO
 
     cfg = dict(cfg)
     model_name = cfg.pop("model")
-    logger.info("training {} with {}", model_name, json.dumps(cfg, default=str))
-    model = YOLO(model_name)
-    results = model.train(**cfg)
+    if "project" in cfg:
+        # ultralytics nests a relative project dir under its own runs dir; keep ours.
+        cfg["project"] = str(Path(cfg["project"]).resolve())
+    if resume_from is not None:
+        logger.info("resuming from {}", resume_from)
+        results = YOLO(str(resume_from)).train(resume=True)
+    else:
+        logger.info("training {} with {}", model_name, json.dumps(cfg, default=str))
+        results = YOLO(model_name).train(**cfg)
     save_dir = Path(results.save_dir)
     summary = {
         "weights": str(save_dir / "weights" / "best.pt"),
@@ -68,6 +78,7 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--fraction", type=float, help="fraction of the train set, for smoke tests")
     parser.add_argument("--workers", type=int)
     parser.add_argument("--set", nargs="*", metavar="KEY=VALUE", help="extra ultralytics args")
+    parser.add_argument("--resume", type=Path, metavar="LAST_PT", help="continue an interrupted run")
     args = parser.parse_args(argv)
 
     overrides = {
@@ -81,7 +92,7 @@ def main(argv: list[str] | None = None) -> None:
         "workers": args.workers,
     }
     overrides.update(_parse_set(args.set))
-    train(load_config(args.config, overrides))
+    train(load_config(args.config, overrides), resume_from=args.resume)
 
 
 if __name__ == "__main__":
