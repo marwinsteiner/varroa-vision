@@ -1,0 +1,37 @@
+# Stage 2: Varroa mite detector on single-bee crops (VarroaDataset, date-grouped splits: no recording day shared between train/val/test).
+# Every key is passed straight to ultralytics YOLO.train(); CLI flags of train.py override.
+
+model: yolo11n.pt            # COCO-pretrained nano, 2.6M params; fine-tuned end to end
+data: datasets/varroa_mite_date/data.yaml
+project: runs/mite
+name: yolo11n_320_date
+
+# Crops are 160x280; letterboxing to 320 upsamples 1.14x, so a 32 px mite is ~37 px.
+imgsz: 320
+epochs: 60
+batch: 64
+patience: 15
+optimizer: auto
+lr0: 0.01
+cos_lr: true
+warmup_epochs: 3
+close_mosaic: 10
+seed: 0
+deterministic: true
+workers: 8
+plots: true
+
+# Augmentation. Bees walk through the tunnel in any orientation, so both flips are
+# label-preserving. Mixup is off: blending two bees produces unrealistic textures and
+# the dataset is large enough without it.
+fliplr: 0.5
+flipud: 0.5
+degrees: 15.0
+scale: 0.3
+translate: 0.1
+hsv_h: 0.015
+hsv_s: 0.5
+hsv_v: 0.4
+mosaic: 1.0
+mixup: 0.0
+erasing: 0.0
