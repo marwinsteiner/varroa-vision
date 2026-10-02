@@ -1,0 +1,88 @@
+"""Fine-tune a YOLO detector from a config file.
+
+Usage:
+    python -m varroa_vision.train --config configs/mite_yolo11n.yaml
+    python -m varroa_vision.train --config configs/mite_yolo11n.yaml --device cpu --epochs 1 --fraction 0.05
+
+Any ``key=value`` pair after the known flags is forwarded to ultralytics, so
+``--set batch=32 lr0=0.005`` works for anything not exposed as a flag.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+from pathlib import Path
+
+import yaml
+from loguru import logger
+
+
+def load_config(path: Path, overrides: dict | None = None) -> dict:
+    cfg = yaml.safe_load(Path(path).read_text())
+    if overrides:
+        cfg.update({k: v for k, v in overrides.items() if v is not None})
+    return cfg
+
+
+def _parse_set(items: list[str] | None) -> dict:
+    out: dict = {}
+    for item in items or []:
+        key, _, raw = item.partition("=")
+        if not _:
+            raise SystemExit(f"--set expects key=value, got {item!r}")
+        out[key] = yaml.safe_load(raw)
+    return out
+
+
+def train(cfg: dict) -> dict:
+    """Run ultralytics training and return a summary dict with weights and metrics."""
+    from ultralytics import YOLO
+
+    cfg = dict(cfg)
+    model_name = cfg.pop("model")
+    logger.info("training {} with {}", model_name, json.dumps(cfg, default=str))
+    model = YOLO(model_name)
+    results = model.train(**cfg)
+    save_dir = Path(results.save_dir)
+    summary = {
+        "weights": str(save_dir / "weights" / "best.pt"),
+        "save_dir": str(save_dir),
+        "metrics": {k: float(v) for k, v in results.results_dict.items()},
+    }
+    (save_dir / "summary.json").write_text(json.dumps(summary, indent=2))
+    logger.info("best weights: {}", summary["weights"])
+    logger.info("final val metrics: {}", summary["metrics"])
+    return summary
+
+
+def main(argv: list[str] | None = None) -> None:
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--config", type=Path, required=True)
+    parser.add_argument("--data", help="override data.yaml path")
+    parser.add_argument("--device", help="e.g. 0, cpu, 0,1")
+    parser.add_argument("--epochs", type=int)
+    parser.add_argument("--batch", type=int)
+    parser.add_argument("--imgsz", type=int)
+    parser.add_argument("--name", help="run name under the config's project dir")
+    parser.add_argument("--fraction", type=float, help="fraction of the train set, for smoke tests")
+    parser.add_argument("--workers", type=int)
+    parser.add_argument("--set", nargs="*", metavar="KEY=VALUE", help="extra ultralytics args")
+    args = parser.parse_args(argv)
+
+    overrides = {
+        "data": args.data,
+        "device": args.device,
+        "epochs": args.epochs,
+        "batch": args.batch,
+        "imgsz": args.imgsz,
+        "name": args.name,
+        "fraction": args.fraction,
+        "workers": args.workers,
+    }
+    overrides.update(_parse_set(args.set))
+    train(load_config(args.config, overrides))
+
+
+if __name__ == "__main__":
+    main()
