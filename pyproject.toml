@@ -1,0 +1,42 @@
+[project]
+name = "varroa-vision"
+version = "0.0.1"
+description = "Fine-tuned object detection of Varroa destructor mites on honeybees, for a beekeeper-facing hive scanning app."
+authors = [{name = "Marwin Steiner"}]
+license = {text = "AGPL-3.0-or-later"}
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "ultralytics>=8.3.0",
+    "numpy>=1.26",
+    "pandas>=2.2",
+    "pillow>=10.0",
+    "pyyaml>=6.0",
+    "requests>=2.32",
+    "tqdm>=4.66",
+    "loguru>=0.7.3",
+]
+
+[project.urls]
+Repository = "https://github.com/marwinsteiner/varroa-vision"
+Issues = "https://github.com/marwinsteiner/varroa-vision/issues"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.6",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/varroa_vision"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
