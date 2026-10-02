@@ -71,12 +71,24 @@ frame; consecutive frames of the same bee are consecutive crops.
 BEEHIVE: a public dataset of Apis mellifera images to empower honeybee monitoring
 research. Data in Brief, 2024. Mendeley Data https://data.mendeley.com/datasets/5yz78xxpmy.
 
-- "Frame" subset: camera inside a hive frame, close-range bees, classes `bee` and
-  `blurred_bee`; 1,440 train / 411 val / 206 test.
-- "Bottom" subset: camera at the hive bottom behind a metal grid, classes `bee` and
-  `occluded_bee`; 1,044 train / 303 val / 147 test.
-- Annotated in Roboflow for object detection. Must be downloaded manually from Mendeley
-  ("Download All"); no stable direct URL.
+Must be downloaded manually from Mendeley ("Download All", 108 MB zip); there is no
+stable direct URL. Unzip to `data/raw/beehive/` so that `frame_dataset/` and
+`bottom_dataset/` sit directly under it. Both are Roboflow YOLOv8 exports
+(`{train,valid,test}/{images,labels}` plus `data.yaml`), every image stretched to
+640 x 640, so bee aspect ratios are not reliable.
+
+| subset | images (train/val/test) | boxes per image | box size | classes |
+|---|---|---|---|---|
+| frame (camera inside a frame, close range) | 1,440 / 411 / 206 | 1.9 | about half the image | `bee` 147, `blurred_bee` 3,795 |
+| bottom (camera under the hive, metal grid) | 1,044 / 303 / 147 | 5.5 | about 16% of the image | `bee` 1,781, `occluded_bee` 6,355 |
+
+Neither view is a phone looking at a comb. The frame subset is far too close (one or
+two bees fill the image, nearly all blurred); the bottom subset has bees at roughly the
+scale a phone would see but through a grid. `python -m varroa_vision.data.beehive`
+merges both into one single-class `bee` dataset (`datasets/beehive_bees`), keeping the
+clear/degraded counts in `meta.csv`. It is a starting point for stage 1, to be
+fine-tuned again on own comb footage. Note the frame subset's own `data.yaml` points
+`val` at the train images; the converter uses `valid/`.
 
 ## Varroa mite fall on sticky boards (later: bottom-board mode)
 
