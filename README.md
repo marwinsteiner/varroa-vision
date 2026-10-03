@@ -39,10 +39,11 @@ work and the open sampling-methodology question.
 
 - [x] Repo scaffold
 - [x] VarroaDataset download and conversion to YOLO format (official and date-grouped splits)
-- [ ] EV2 and BEEHIVE conversion
-- [ ] Stage 2: fine-tune mite detector, evaluate at box level and at bee level (training)
-- [ ] Stage 1: fine-tune bee detector on comb frames
-- [ ] Tracking + per-bee aggregation on video
+- [x] EV2 (bee-level cross-domain test) and BEEHIVE (bee boxes) conversion
+- [x] Stage 2 run 1: mAP50 0.80 on test, bee-level sensitivity 0.83 / specificity 0.97 at the rate-matched threshold; see `docs/results.md`
+- [ ] Stage 2: stable recipe (no-mosaic runs), date-grouped split, EV2 pseudo-label domain
+- [x] Stage 1 run 1 on BEEHIVE: mAP50 0.95 on test (in-hive cameras, not phone footage)
+- [x] Tracking + per-bee aggregation + stopping rule (unit-tested with fake models; no real comb video yet)
 - [ ] Export to TFLite and build the Android app
 - [ ] Field calibration of camera counts against alcohol-wash counts
 
