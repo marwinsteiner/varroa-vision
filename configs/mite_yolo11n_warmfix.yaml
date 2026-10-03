@@ -1,0 +1,40 @@
+# Stage 2 v5: tame the warmup. Every earlier run starts well at epoch 1 (the COCO
+# features already localise mites: mAP50 0.73 after one epoch at low lr) and then
+# collapses to 0.40 during epochs 2-9 before slowly recovering over the cosine decay.
+# ultralytics warms the bias learning rate up from warmup_bias_lr=0.1 regardless of lr0,
+# which with AdamW is a huge step on a tiny single-class head. Set it equal to lr0.
+
+model: yolo11n.pt
+data: datasets/varroa_mite/data.yaml
+project: runs/mite
+name: yolo11n_320_official_warmfix
+
+imgsz: 320
+epochs: 60
+batch: 64
+patience: 30
+optimizer: AdamW
+lr0: 0.001
+lrf: 0.05
+weight_decay: 0.0005
+cos_lr: true
+warmup_epochs: 2
+warmup_bias_lr: 0.001
+warmup_momentum: 0.8
+close_mosaic: 0
+seed: 0
+deterministic: true
+workers: 8
+plots: true
+
+fliplr: 0.5
+flipud: 0.5
+degrees: 15.0
+scale: 0.2
+translate: 0.1
+hsv_h: 0.015
+hsv_s: 0.5
+hsv_v: 0.4
+mosaic: 0.0
+mixup: 0.0
+erasing: 0.0

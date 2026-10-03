@@ -52,6 +52,25 @@ at epoch 52 and is reported below once finished.
 The common factor is the optimiser step: `optimizer: auto` selects AdamW at lr 0.002 for
 this run length. Run 4 uses AdamW at 0.0005 with everything else as in run 2.
 
+### Run 4: no mosaic, 320 px, AdamW lr 0.0005 (GPU, after the lynx reboot)
+
+Not the learning rate either, at least not lr0. The curve is the clearest yet: mAP50
+0.73 after epoch 1, 0.40 by epoch 5, 0.42 at epoch 9, then a slow climb back to 0.73
+by epoch 49. best.pt: val mAP50 0.753, test 0.708; bee level on test at the
+rate-matched threshold (0.25): sensitivity 0.75, specificity 0.99, rate 29.1 vs 31.3.
+Worse than run 1.
+
+Reading: the COCO-pretrained features already localise mites after one epoch, and the
+early epochs damage them. The one schedule element that lr0 does not control is
+`warmup_bias_lr`, which ultralytics defaults to 0.1 and ramps down to lr0 over the
+warmup; with AdamW on a tiny single-class head that is a large step. Runs 5 and 6 set
+it to lr0 (`warmfix`), run 6 also freezes the backbone. The GPU makes each of these a
+five-minute experiment; `scripts/experiments/stage2_gpu_sweep1.sh` runs the set.
+
+A note on resuming: ultralytics cannot resume a CPU checkpoint on the GPU (optimiser
+state stays on the CPU: "params, grads, exp_avgs ... must have same device"). The
+interrupted CPU runs were restarted from scratch on the GPU instead.
+
 ### EV2 cross-domain check (different camera, bee crops 300-700 px)
 
 Run 1 weights on all 5,170 EV2 crops, bee level only (EV2 has no mite boxes). 3,183
