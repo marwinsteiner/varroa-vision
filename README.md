@@ -75,9 +75,13 @@ uv run python -m varroa_vision.data.zenodo ev2                 # 1.1 GB
 uv run python -m varroa_vision.data.ev2                        # -> datasets/ev2_bees
 uv run python -m varroa_vision.evaluate --weights ... --data datasets/ev2_bees/data.yaml --split all --bee-only
 
-# mobile export
+# mobile export (float32 TFLite; add --quantize 8 --data datasets/varroa_mite/data.yaml for INT8)
 uv sync --extra export-tflite
 uv run python -m varroa_vision.export --weights ... --formats tflite onnx
+uv run python -m varroa_vision.evaluate --weights runs/mite/<run>/weights/best_saved_model/best_float32.tflite --split val   # parity check
+
+# compare runs in one table
+uv run python -m varroa_vision.compare runs/mite/* --ev2 datasets/ev2_pseudo/data.yaml --ev2-split test
 ```
 
 Training on a machine without git: `scripts/deploy_lynx.sh user@host` pushes HEAD over ssh.
