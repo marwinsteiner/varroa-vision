@@ -85,6 +85,27 @@ model keeps improving to 0.85. The warmup and learning-rate hypotheses are dropp
 Sweep 2 keeps mosaic and adds regularisation (scale 0.5, mixup 0.1, 80 epochs) at 320
 and 416 px, plus yolo11s.
 
+Comparison of all runs so far (`python -m varroa_vision.compare`). `conf` is the
+rate-matched threshold chosen on val; test and EV2 metrics are at that threshold. The
+`warmfix_freeze` row was taken mid-run (epoch 10 of 60) and is refreshed below.
+
+| run | best epoch | val mAP50 | test mAP50 | conf | test sens | test spec | test rate pred / true | EV2 sens | EV2 spec |
+|---|---|---|---|---|---|---|---|---|---|
+| run 1, mosaic (CPU) | 12 | 0.819 | 0.801 | 0.20 | 0.876 | 0.946 | 40.4 / 31.3 | 0.384 | 0.993 |
+| run 4, low lr, no mosaic | 24 | 0.753 | 0.708 | 0.30 | 0.725 | 0.991 | 25.5 / 31.3 | 0.500 | 0.999 |
+| no mosaic (GPU) | 1 | 0.703 | 0.640 | 0.20 | 0.734 | 0.957 | 30.7 / 31.3 | 0.308 | 0.999 |
+| mosaic (GPU, patience 25) | 26 | 0.840 | 0.806 | 0.25 | 0.817 | 0.975 | 28.6 / 31.3 | 0.220 | 0.999 |
+| warmfix, no mosaic | 43 | 0.745 | 0.679 | 0.30 | 0.785 | 0.985 | 26.7 / 31.3 | 0.411 | 0.998 |
+| warmfix + frozen backbone (partial) | 7 | 0.822 | 0.758 | 0.25 | 0.831 | 0.962 | 31.7 / 31.3 | 0.409 | 0.999 |
+
+Two readings. In-domain, the mosaic recipe wins (test mAP50 0.81, bee-level
+sensitivity 0.82 at specificity 0.98). Out-of-domain, every run is poor and the best
+in-domain run is the worst on EV2 (sensitivity 0.22): the more the model fits the tunnel
+camera, the less it transfers. Specificity stays at 0.999 everywhere, so the EV2
+detections are trustworthy as pseudo-labels. Run 9 (`combined`) trains the mosaic
+recipe on VarroaDataset plus the pseudo-labelled EV2 crops, with EV2's held-out videos
+as the out-of-domain test.
+
 A note on resuming: ultralytics cannot resume a CPU checkpoint on the GPU (optimiser
 state stays on the CPU: "params, grads, exp_avgs ... must have same device"). The
 interrupted CPU runs were restarted from scratch on the GPU instead.

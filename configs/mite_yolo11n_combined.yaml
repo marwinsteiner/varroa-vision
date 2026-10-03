@@ -1,0 +1,35 @@
+# Stage 2 v9: the mosaic recipe trained on VarroaDataset train + EV2 pseudo-labelled
+# train (two cameras). Validation and test stay VarroaDataset's official splits, so the
+# in-domain numbers are comparable with every other run; EV2's held-out videos
+# (datasets/ev2_pseudo, split test) are the out-of-domain check.
+
+model: yolo11n.pt
+data: datasets/mite_combined/data.yaml
+project: runs/mite
+name: yolo11n_320_combined
+
+imgsz: 320
+epochs: 60
+batch: 64
+patience: 25
+optimizer: auto
+lr0: 0.01
+cos_lr: true
+warmup_epochs: 3
+close_mosaic: 10
+seed: 0
+deterministic: true
+workers: 8
+plots: true
+
+fliplr: 0.5
+flipud: 0.5
+degrees: 15.0
+scale: 0.3
+translate: 0.1
+hsv_h: 0.015
+hsv_s: 0.5
+hsv_v: 0.4
+mosaic: 1.0
+mixup: 0.0
+erasing: 0.0
