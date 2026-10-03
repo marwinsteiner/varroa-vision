@@ -67,6 +67,24 @@ warmup; with AdamW on a tiny single-class head that is a large step. Runs 5 and 
 it to lr0 (`warmfix`), run 6 also freezes the backbone. The GPU makes each of these a
 five-minute experiment; `scripts/experiments/stage2_gpu_sweep1.sh` runs the set.
 
+### GPU sweep 1 (runs 2, 1, 5, 6 re-run or run fresh on the RTX 4060, ~5 min each)
+
+Validation mAP50 by epoch:
+
+| run | 1 | 6 | 11 | 16 | 21 | 26 | 31 | 41 | 51 | note |
+|---|---|---|---|---|---|---|---|---|---|---|
+| no mosaic (run 2 config) | 0.70 | 0.38 | 0.28 | 0.28 | 0.68 | 0.42 | | | | early stop, best epoch 1 |
+| mosaic (run 1 config, patience 25) | 0.35 | 0.50 | 0.40 | 0.75 | 0.80 | 0.84 | 0.85 | 0.80 | 0.80 | best run so far |
+| warmfix (no mosaic, lr 0.001, bias warmup fixed) | 0.45 | 0.32 | 0.42 | 0.52 | 0.52 | 0.53 | | | | flat and low |
+| warmfix + frozen backbone | | | | | | | | | | see comparison table |
+
+This settles it, and reverses the earlier reading: mosaic is not the problem, its
+absence is. Without it the 8k crops are memorised within a few epochs and validation
+decays from the epoch-1 level that the pretrained features already give; with it the
+model keeps improving to 0.85. The warmup and learning-rate hypotheses are dropped.
+Sweep 2 keeps mosaic and adds regularisation (scale 0.5, mixup 0.1, 80 epochs) at 320
+and 416 px, plus yolo11s.
+
 A note on resuming: ultralytics cannot resume a CPU checkpoint on the GPU (optimiser
 state stays on the CPU: "params, grads, exp_avgs ... must have same device"). The
 interrupted CPU runs were restarted from scratch on the GPU instead.
