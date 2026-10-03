@@ -25,7 +25,8 @@ def _summary(run: Path, data_yaml: Path, split: str, device, conf: float | None,
     path = out / "summary.json"
     if path.exists() and not force:
         s = json.loads(path.read_text())
-        if conf is None or abs(s["bee_level_at_conf"]["conf"] - conf) < 1e-9:
+        stale = split != "all" and "bee_level_best_rate" not in s  # written by an older evaluate
+        if not stale and (conf is None or abs(s["bee_level_at_conf"]["conf"] - conf) < 1e-9):
             return s
     from varroa_vision.evaluate import evaluate
 
