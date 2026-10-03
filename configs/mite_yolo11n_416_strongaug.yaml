@@ -1,0 +1,32 @@
+# Stage 2 v8: as strongaug at 416 px (mites ~48 px after letterboxing instead of ~37).
+
+model: yolo11n.pt
+data: datasets/varroa_mite/data.yaml
+project: runs/mite
+name: yolo11n_416_official_strongaug
+
+imgsz: 416
+epochs: 80
+batch: 64
+patience: 30
+optimizer: auto
+lr0: 0.01
+cos_lr: true
+warmup_epochs: 3
+close_mosaic: 10
+seed: 0
+deterministic: true
+workers: 8
+plots: true
+
+fliplr: 0.5
+flipud: 0.5
+degrees: 20.0
+scale: 0.5
+translate: 0.1
+hsv_h: 0.02
+hsv_s: 0.6
+hsv_v: 0.5
+mosaic: 1.0
+mixup: 0.1
+erasing: 0.0

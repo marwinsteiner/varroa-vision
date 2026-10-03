@@ -1,0 +1,36 @@
+# Stage 2 v7: mosaic kept, regularisation turned up. The GPU sweep showed the pattern
+# cleanly: every run without mosaic peaks at epoch 1 and decays (the 8k crops are
+# memorised within a few epochs), while the mosaic runs climb to mAP50 0.85 on val.
+# So mosaic is the regulariser that matters; this run adds scale jitter and mixup on
+# top and trains longer with a late mosaic switch-off.
+
+model: yolo11n.pt
+data: datasets/varroa_mite/data.yaml
+project: runs/mite
+name: yolo11n_320_official_strongaug
+
+imgsz: 320
+epochs: 80
+batch: 64
+patience: 30
+optimizer: auto
+lr0: 0.01
+cos_lr: true
+warmup_epochs: 3
+close_mosaic: 10
+seed: 0
+deterministic: true
+workers: 8
+plots: true
+
+fliplr: 0.5
+flipud: 0.5
+degrees: 20.0
+scale: 0.5
+translate: 0.1
+hsv_h: 0.02
+hsv_s: 0.6
+hsv_v: 0.5
+mosaic: 1.0
+mixup: 0.1
+erasing: 0.0
