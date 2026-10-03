@@ -75,10 +75,12 @@ uv run python -m varroa_vision.data.zenodo ev2                 # 1.1 GB
 uv run python -m varroa_vision.data.ev2                        # -> datasets/ev2_bees
 uv run python -m varroa_vision.evaluate --weights ... --data datasets/ev2_bees/data.yaml --split all --bee-only
 
-# mobile export (float32 TFLite; add --quantize 8 --data datasets/varroa_mite/data.yaml for INT8)
+# mobile export: saved_model writes best_float32.tflite and best_float16.tflite via onnx2tf
 uv sync --extra export-tflite
-uv run python -m varroa_vision.export --weights ... --formats tflite onnx
+uv run python -m varroa_vision.export --weights ... --formats saved_model onnx
 uv run python -m varroa_vision.evaluate --weights runs/mite/<run>/weights/best_saved_model/best_float32.tflite --split val   # parity check
+# INT8 goes through LiteRT in a separate env (torch < 2.14): sh scripts/make_export_env.sh, then
+# .venv-export/bin/python -m varroa_vision.export --weights ... --formats tflite --quantize 8 --data datasets/varroa_mite/data.yaml
 
 # compare runs in one table
 uv run python -m varroa_vision.compare runs/mite/* --ev2 datasets/ev2_pseudo/data.yaml --ev2-split test

@@ -3,11 +3,19 @@
     python -m varroa_vision.export --weights runs/mite/x/weights/best.pt --formats tflite onnx
     python -m varroa_vision.export --weights ... --formats tflite --quantize 8 --data datasets/varroa_mite/data.yaml
 
-ultralytics 8.4 selects precision with ``quantize``: unset means float32; ``8`` is INT8
-(needs ``--data`` for calibration); ``w8a16`` and ``w8a32`` are INT8 weights with wider
-activations. TFLite (LiteRT) does not take float16, so the mobile choices are float32 or
-INT8. Parity of an exported model is checked with ``varroa_vision.evaluate`` by passing
-the exported file as ``--weights``.
+Two routes to a ``.tflite``:
+
+- ``--formats saved_model`` goes ONNX -> onnx2tf -> TensorFlow SavedModel and writes
+  ``best_float32.tflite`` and ``best_float16.tflite`` next to it. Works in the training
+  environment (``uv sync --extra export-tflite``). This is the route used so far.
+- ``--formats tflite`` is ultralytics 8.4's LiteRT path through litert-torch, which pins
+  torch < 2.14 and therefore needs the separate environment from
+  ``scripts/make_export_env.sh``. It is the route for INT8 (``--quantize 8 --data ...``).
+
+``quantize`` selects precision where the format allows it: unset means float32, ``8``
+INT8 (calibration data required), ``w8a16``/``w8a32`` INT8 weights with wider
+activations. Parity of an exported model is checked with ``varroa_vision.evaluate`` by
+passing the exported file as ``--weights``.
 """
 
 from __future__ import annotations
