@@ -41,6 +41,17 @@ not on F1. Per-bee count error at 0.25 to 0.30 is about 0.1 mites per bee.
 The low mAP50-95 (0.28) says boxes are found but loosely placed; for counting that is
 irrelevant, for the app's overlay it only affects where the marker is drawn.
 
+### Runs 2 and 3: no mosaic, 320 px and 416 px, 2026-10-03
+
+Mosaic was not the cause. Both runs swing just as hard between neighbouring epochs
+(320 px: mAP50 0.79 at epoch 29, 0.50 at 33, 0.78 at 37; 416 px: 0.57 at epoch 5, 0.24
+at 13) and only settle once the cosine schedule has decayed the learning rate. The
+416 px run was stopped at epoch 30 (worse and 2.5x the cost). Run 2 reached mAP50 0.76
+at epoch 52 and is reported below once finished.
+
+The common factor is the optimiser step: `optimizer: auto` selects AdamW at lr 0.002 for
+this run length. Run 4 uses AdamW at 0.0005 with everything else as in run 2.
+
 ### EV2 cross-domain check (different camera, bee crops 300-700 px)
 
 Run 1 weights on all 5,170 EV2 crops, bee level only (EV2 has no mite boxes). 3,183

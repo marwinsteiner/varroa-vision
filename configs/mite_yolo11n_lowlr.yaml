@@ -1,0 +1,38 @@
+# Stage 2 v4: no mosaic, 320 px, explicit AdamW at a quarter of the auto learning rate.
+# Runs 1-3 (mosaic on/off, 320/416) all showed the same symptom: validation mAP50 swinging
+# by 0.3 between neighbouring epochs until the cosine schedule had decayed the rate, so
+# the instability is the optimiser step, not the augmentation. 'optimizer: auto' picks
+# AdamW lr 0.002 for this run length; 0.0005 is the first thing to try.
+
+model: yolo11n.pt
+data: datasets/varroa_mite/data.yaml
+project: runs/mite
+name: yolo11n_320_official_lowlr
+
+imgsz: 320
+epochs: 60
+batch: 64
+patience: 30
+optimizer: AdamW
+lr0: 0.0005
+lrf: 0.05
+weight_decay: 0.0005
+cos_lr: true
+warmup_epochs: 3
+close_mosaic: 0
+seed: 0
+deterministic: true
+workers: 8
+plots: true
+
+fliplr: 0.5
+flipud: 0.5
+degrees: 15.0
+scale: 0.2
+translate: 0.1
+hsv_h: 0.015
+hsv_s: 0.5
+hsv_v: 0.4
+mosaic: 0.0
+mixup: 0.0
+erasing: 0.0
