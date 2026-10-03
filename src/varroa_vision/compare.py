@@ -45,7 +45,7 @@ def best_epoch(run: Path) -> int | None:
     return int(df["epoch"].iloc[int(fit.idxmax())])
 
 
-def compare_run(run: Path, data_yaml: Path, ev2_yaml: Path | None, device, force: bool) -> dict:
+def compare_run(run: Path, data_yaml: Path, ev2_yaml: Path | None, device, force: bool, ev2_split: str = "all") -> dict:
     val = _summary(run, data_yaml, "val", device, None, False, force)
     conf = float(val.get("bee_level_best_rate", val["bee_level_best_f1"])["conf"])
     test = _summary(run, data_yaml, "test", device, conf, False, force)
@@ -64,7 +64,7 @@ def compare_run(run: Path, data_yaml: Path, ev2_yaml: Path | None, device, force
         "ev2_spec": None,
     }
     if ev2_yaml is not None:
-        e = _summary(run, ev2_yaml, "all", device, conf, True, force)["bee_level_at_conf"]
+        e = _summary(run, ev2_yaml, ev2_split, device, conf, True, force)["bee_level_at_conf"]
         row["ev2_sens"], row["ev2_spec"] = e["sensitivity"], e["specificity"]
     return row
 
@@ -86,7 +86,8 @@ def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("runs", nargs="+", type=Path)
     parser.add_argument("--data", type=Path, default=Path("datasets/varroa_mite/data.yaml"))
-    parser.add_argument("--ev2", type=Path, default=None)
+    parser.add_argument("--ev2", type=Path, default=None, help="EV2 data.yaml (ev2_bees or ev2_pseudo)")
+    parser.add_argument("--ev2-split", default="all", help="'all' for ev2_bees, 'test' for the held-out videos of ev2_pseudo")
     parser.add_argument("--device", default=None)
     parser.add_argument("--force", action="store_true")
     parser.add_argument("--out", type=Path, default=None, help="also write the table (markdown) and rows (json)")
@@ -96,7 +97,7 @@ def main(argv: list[str] | None = None) -> None:
         if not (run / "weights" / "best.pt").exists():
             logger.warning("skipping {}: no best.pt", run)
             continue
-        rows.append(compare_run(run, args.data, args.ev2, args.device, args.force))
+        rows.append(compare_run(run, args.data, args.ev2, args.device, args.force, args.ev2_split))
     table = format_table(rows)
     print(table)
     if args.out:
