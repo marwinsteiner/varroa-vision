@@ -132,7 +132,7 @@ def convert(raw_dir: Path, out_dir: Path, link: bool = True) -> Path:
     data_yaml = out_dir / "data.yaml"
     data_yaml.write_text(
         yaml.safe_dump(
-            {"path": str(out_dir.resolve()), "val": "images/all", "names": CLASS_NAMES},
+            {"path": str(out_dir.resolve()), "val": "images/all", "all": "images/all", "names": CLASS_NAMES},
             sort_keys=False,
         )
     )

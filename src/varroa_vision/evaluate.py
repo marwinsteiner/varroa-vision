@@ -31,7 +31,7 @@ DEFAULT_GRID = np.round(np.arange(0.05, 0.96, 0.05), 2)
 def predict_split(model, data_yaml: Path, split: str, imgsz: int, device, batch: int, min_conf: float) -> pd.DataFrame:
     """One row per detection (image, conf) plus a row with conf=NaN for images without any."""
     cfg = yaml.safe_load(Path(data_yaml).read_text())
-    img_dir = Path(cfg["path"]) / cfg[split]
+    img_dir = Path(cfg["path"]) / cfg.get(split, cfg.get("val"))
     rows = []
     for r in model.predict(source=str(img_dir), imgsz=imgsz, device=device, batch=batch, conf=min_conf, stream=True, verbose=False):
         name = Path(r.path).name
@@ -125,6 +125,12 @@ def evaluate(weights: Path, data_yaml: Path, split: str, imgsz: int, device, bat
         "bee_level_best_f1": best.to_dict(),
         "bee_level_at_conf": chosen.to_dict(),
     }
+    if "rate_true_per100" in table.columns:
+        # The app reports mites per 100 bees, so the operating threshold that matters is
+        # the one whose predicted rate matches the true rate, not the one with best F1.
+        best_rate = table.iloc[(table["rate_pred_per100"] - table["rate_true_per100"]).abs().idxmin()]
+        summary["bee_level_best_rate"] = best_rate.to_dict()
+        logger.info("rate-matched threshold conf {:.2f}: pred {:.2f} vs true {:.2f} per 100 bees, sens {:.3f} spec {:.3f}", best_rate["conf"], best_rate["rate_pred_per100"], best_rate["rate_true_per100"], best_rate["sensitivity"], best_rate["specificity"])
     (out_dir / "summary.json").write_text(json.dumps(summary, indent=2))
     logger.info("bee level, best F1 at conf {:.2f}: sens {:.3f} spec {:.3f} prec {:.3f} F1 {:.3f}", best["conf"], best["sensitivity"], best["specificity"], best["precision"], best["f1"])
     logger.info("at conf {:.2f}: sens {:.3f} spec {:.3f} prec {:.3f} F1 {:.3f}; infested bees true {} pred {}", chosen["conf"], chosen["sensitivity"], chosen["specificity"], chosen["precision"], chosen["f1"], int(chosen["infested_true"]), int(chosen["infested_pred"]))

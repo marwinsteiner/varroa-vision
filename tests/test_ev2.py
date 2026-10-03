@@ -63,4 +63,4 @@ def test_convert(raw_dir: Path, tmp_path: Path):
     assert rows["10_01026.MTS_frame0.png"]["video_class"] == "free"
     assert (rows["1_00953.MTS_frame4.png"]["width"], rows["1_00953.MTS_frame4.png"]["height"]) == ("342", "261")
     cfg = yaml.safe_load(data_yaml.read_text())
-    assert cfg["val"] == "images/all" and "train" not in cfg
+    assert cfg["val"] == "images/all" and cfg["all"] == "images/all" and "train" not in cfg
