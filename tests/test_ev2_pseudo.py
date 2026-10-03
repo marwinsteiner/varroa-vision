@@ -32,29 +32,41 @@ def test_video_split_is_deterministic_and_covers_all_buckets():
     assert counts["train"] > counts["val"] > 0 and counts["test"] > 0
 
 
-def test_build_keeps_detected_positives_and_all_negatives(tmp_path: Path):
+def test_build_keeps_detected_positives_and_all_negatives(tmp_path: Path, monkeypatch):
     ev2 = _ev2_dir(tmp_path)
     dets = {
         "v1_frame0.png": [(0.5, 0.5, 0.1, 0.1, 0.9)],
-        "v1_frame1.png": [],  # visible mite but no detection -> dropped
+        "v1_frame1.png": [],  # visible mite but no detection -> dropped from train
         "v1_frame2.png": [(0.2, 0.2, 0.1, 0.1, 0.3)],  # negative with a detection -> background anyway
         "v2_frame0.png": [],
     }
+    # pin the split: v1 trains, v2 is held out
+    monkeypatch.setattr(ev2_pseudo, "video_split", lambda video, seed=0: "train" if "v1" in video else "test")
     out = tmp_path / "pseudo"
     data_yaml = ev2_pseudo.build(ev2, dets, out, link=False)
-    s1 = ev2_pseudo.video_split("varroa_infested/v1.MTS")
-    s2 = ev2_pseudo.video_split("varroa_free/v2.MTS")
-    assert (out / "labels" / s1 / "v1_frame0.txt").read_text() == "0 0.500000 0.500000 0.100000 0.100000\n"
-    assert not (out / "images" / s1 / "v1_frame1.png").exists()
-    assert (out / "labels" / s1 / "v1_frame2.txt").read_text() == ""
-    assert (out / "labels" / s2 / "v2_frame0.txt").read_text() == ""
+    assert (out / "labels" / "train" / "v1_frame0.txt").read_text() == "0 0.500000 0.500000 0.100000 0.100000\n"
+    assert not (out / "images" / "train" / "v1_frame1.png").exists()
+    assert (out / "labels" / "train" / "v1_frame2.txt").read_text() == ""
+    assert (out / "images" / "test" / "v2_frame0.png").exists()
+    assert not (out / "labels" / "test" / "v2_frame0.txt").exists()
     stats = json.loads((out / "stats.json").read_text())
-    assert stats[s1]["dropped_positive"] == 1 and stats[s1]["positives"] == 1
-    assert stats[s1]["unlabelled_detections_on_negatives"] == 1
+    assert stats["train"]["dropped_positive"] == 1 and stats["train"]["positives"] == 1
+    assert stats["train"]["unlabelled_detections_on_negatives"] == 1
+    assert stats["test"]["images"] == 1
     with (out / "meta.csv").open() as fh:
         rows = {r["image"]: r for r in csv.DictReader(fh)}
     assert rows["v1_frame0.png"]["n_boxes"] == "1" and rows["v1_frame2.png"]["n_boxes"] == "0"
+    assert rows["v2_frame0.png"]["n_boxes"] == "" and rows["v2_frame0.png"]["pseudo"] == "0"
     assert yaml.safe_load(data_yaml.read_text())["names"] == {0: "varroa"}
+
+
+def test_heldout_positives_are_kept(tmp_path: Path, monkeypatch):
+    ev2 = _ev2_dir(tmp_path)
+    monkeypatch.setattr(ev2_pseudo, "video_split", lambda video, seed=0: "test")
+    out = tmp_path / "pseudo"
+    ev2_pseudo.build(ev2, {}, out, link=False)
+    stats = json.loads((out / "stats.json").read_text())
+    assert stats["test"] == {"images": 4, "positives": 2}
 
 
 def test_write_combined(tmp_path: Path):

@@ -55,7 +55,7 @@ def bee_level_table(dets: pd.DataFrame, meta: pd.DataFrame, grid=DEFAULT_GRID) -
         raise KeyError(f"{len(missing)} predicted images not in meta.csv, e.g. {sorted(missing)[:3]}")
     n_bees = len(meta)
     true_pos_bees = meta["infected"].sum()
-    has_counts = "n_boxes" in meta.columns
+    has_counts = "n_boxes" in meta.columns and meta["n_boxes"].notna().all()
     true_mites = meta["n_boxes"].sum() if has_counts else None
     rows = []
     for t in grid:

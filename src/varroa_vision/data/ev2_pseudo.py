@@ -11,7 +11,10 @@ safe. This module:
    not written as background, because that would teach the wrong thing);
 3. keeps every ``varroa_visible == no`` crop as a background image;
 4. splits by video with a deterministic hash, so no video leaks between train, val
-   and test, and writes ``data.yaml`` and ``meta.csv``.
+   and test, and writes ``data.yaml`` and ``meta.csv``. Only the train videos are
+   pseudo-labelled; the val and test videos keep every crop with its true visible flag
+   and no boxes, as out-of-domain bee-level test sets
+   (``evaluate --data datasets/ev2_pseudo/data.yaml --split test --bee-only``).
 
 With ``--combine-with datasets/varroa_mite`` it also writes a dataset whose train list
 is VarroaDataset train plus EV2 pseudo train, with VarroaDataset val/test unchanged, so
@@ -76,17 +79,24 @@ def build(ev2_dir: Path, detections: dict[str, list], out_dir: Path, link: bool 
         boxes = detections.get(rec.image, [])
         split = video_split(rec.video, seed)
         st = stats[split]
-        if rec.infected and not boxes:
-            st["dropped_positive"] += 1
-            continue
-        lines = "".join(f"0 {cx:.6f} {cy:.6f} {w:.6f} {h:.6f}\n" for cx, cy, w, h, _ in boxes) if rec.infected else ""
+        if split == "train":
+            # training rows: pseudo boxes on detected positives, backgrounds for negatives
+            if rec.infected and not boxes:
+                st["dropped_positive"] += 1
+                continue
+            lines = "".join(f"0 {cx:.6f} {cy:.6f} {w:.6f} {h:.6f}\n" for cx, cy, w, h, _ in boxes) if rec.infected else ""
+            (out_dir / "labels" / split / f"{Path(rec.image).stem}.txt").write_text(lines)
+            n_boxes = len(boxes) if rec.infected else 0
+            st["boxes"] += n_boxes
+            st["unlabelled_detections_on_negatives"] += len(boxes) if not rec.infected else 0
+        else:
+            # held-out videos keep every crop with its true visible flag and no boxes,
+            # for bee-level evaluation only (evaluate.py --bee-only)
+            n_boxes = None
         _place(img_src / rec.image, out_dir / "images" / split / rec.image, link)
-        (out_dir / "labels" / split / f"{Path(rec.image).stem}.txt").write_text(lines)
         st["images"] += 1
         st["positives"] += int(rec.infected)
-        st["boxes"] += len(boxes) if rec.infected else 0
-        st["unlabelled_detections_on_negatives"] += len(boxes) if not rec.infected else 0
-        rows.append({"image": rec.image, "split": split, "video": rec.video, "video_class": rec.video_class, "infected": int(rec.infected), "n_boxes": len(boxes) if rec.infected else 0, "pseudo": 1})
+        rows.append({"image": rec.image, "split": split, "video": rec.video, "video_class": rec.video_class, "infected": int(rec.infected), "n_boxes": n_boxes, "pseudo": int(split == "train")})
     with (out_dir / "meta.csv").open("w", newline="") as fh:
         w = csv.DictWriter(fh, fieldnames=list(rows[0]))
         w.writeheader()

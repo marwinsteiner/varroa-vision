@@ -58,6 +58,13 @@ def test_bee_level_table():
     assert high["f1"] == 1.0
 
 
+def test_bee_level_table_ignores_partial_counts():
+    meta = pd.DataFrame({"image": ["a", "b"], "infected": [0, 1], "n_boxes": [0, np.nan]})
+    dets = pd.DataFrame({"image": ["a", "b"], "conf": [np.nan, 0.7]})
+    table = bee_level_table(dets, meta, grid=np.array([0.5]))
+    assert "mites_true" not in table.columns
+
+
 def test_bee_level_table_without_counts():
     meta = pd.DataFrame({"image": ["a", "b"], "infected": [0, 1]})
     dets = pd.DataFrame({"image": ["a", "b"], "conf": [np.nan, 0.7]})
