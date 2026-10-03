@@ -1,0 +1,36 @@
+# Stage 2 v2: as mite_yolo11n.yaml but without mosaic.
+# Mosaic stitches four 160x280 crops into one canvas and rescales, so during training a
+# 32 px mite shrinks to ~16 px while validation sees it at ~37 px. The first run's
+# epoch-to-epoch mAP swung between 0.46 and 0.80 and stopped early at epoch 27, before
+# close_mosaic would have kicked in. Plain per-image augmentation instead.
+
+model: yolo11n.pt
+data: datasets/varroa_mite/data.yaml
+project: runs/mite
+name: yolo11n_320_official_nomosaic
+
+imgsz: 320
+epochs: 60
+batch: 64
+patience: 25
+optimizer: auto
+lr0: 0.01
+cos_lr: true
+warmup_epochs: 3
+close_mosaic: 0
+seed: 0
+deterministic: true
+workers: 8
+plots: true
+
+fliplr: 0.5
+flipud: 0.5
+degrees: 15.0
+scale: 0.2
+translate: 0.1
+hsv_h: 0.015
+hsv_s: 0.5
+hsv_v: 0.4
+mosaic: 0.0
+mixup: 0.0
+erasing: 0.0
