@@ -49,8 +49,11 @@ def train(cfg: dict, resume_from: Path | None = None) -> dict:
         # ultralytics nests a relative project dir under its own runs dir; keep ours.
         cfg["project"] = str(Path(cfg["project"]).resolve())
     if resume_from is not None:
-        logger.info("resuming from {}", resume_from)
-        results = YOLO(str(resume_from)).train(resume=True)
+        # ultralytics restores every argument from the checkpoint; device, batch and
+        # imgsz are the ones it allows overriding, which is what moving CPU -> GPU needs.
+        keep = {k: cfg[k] for k in ("device", "batch", "workers") if cfg.get(k) is not None}
+        logger.info("resuming from {} with {}", resume_from, keep)
+        results = YOLO(str(resume_from)).train(resume=True, **keep)
     else:
         logger.info("training {} with {}", model_name, json.dumps(cfg, default=str))
         results = YOLO(model_name).train(**cfg)
