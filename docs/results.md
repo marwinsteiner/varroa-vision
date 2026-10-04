@@ -273,5 +273,11 @@ split 160 / 31 / 42. Box level:
 
 The in-hive cameras transfer nothing to a phone looking at a comb; 160 comb photos
 bring the detector to a weak but real 0.30. Dense combs with partly labelled bees and
-Roboflow's 640 x 640 stretch both cap this; the 1024 px run and tiled inference
-(`pipeline/tiled.py`) address the scale half. The data half needs more comb photos.
+Roboflow's 640 x 640 stretch both cap this.
+
+### Run 3: the same at 1024 px
+
+Hofer comb test mAP50 0.303 at 1024 (0.257 at 640), BEEHIVE test 0.947: no gain over
+run 2 at twice the cost, so resolution is not the limiting factor with this little
+data. Run 2 at 640 is the stage 1 release model; tiled inference (`pipeline/tiled.py`)
+remains the way to handle whole-comb stills. The data half needs more comb photos.
