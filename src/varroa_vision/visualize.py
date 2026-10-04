@@ -47,8 +47,22 @@ def _label(img, text, x, y, color):
     cv2.putText(img, text, (x + 2, y - 3), cv2.FONT_HERSHEY_SIMPLEX, 0.5, WHITE if color != ORANGE else BLACK, 1, cv2.LINE_AA)
 
 
-def annotate_frame(img, bees, mites, counts: dict) -> np.ndarray:
-    """``bees``: [(xyxy, conf)], ``mites``: [(xyxy, conf, strong)] in frame coordinates."""
+def upscale_for_drawing(img, bees, mites, min_side: int):
+    """Enlarge small images (single-bee crops) by an integer factor so boxes and labels
+    stay legible; returns the scaled image and boxes."""
+    h, w = img.shape[:2]
+    k = max(1, int(np.ceil(min_side / max(1, min(h, w)))))
+    if k == 1:
+        return img, bees, mites
+    img = cv2.resize(img, (w * k, h * k), interpolation=cv2.INTER_CUBIC)
+    bees = [(tuple(v * k for v in b), c) for b, c in bees]
+    mites = [(tuple(int(v * k) for v in b), c, s) for b, c, s in mites]
+    return img, bees, mites
+
+
+def annotate_frame(img, bees, mites, counts: dict | None) -> np.ndarray:
+    """``bees``: [(xyxy, conf)], ``mites``: [(xyxy, conf, strong)] in frame coordinates.
+    ``counts=None`` draws boxes only, without the running-total overlay."""
     out = img.copy()
     for (x1, y1, x2, y2), c in bees:
         cv2.rectangle(out, (int(x1), int(y1)), (int(x2), int(y2)), GREEN, 2)
@@ -57,6 +71,8 @@ def annotate_frame(img, bees, mites, counts: dict) -> np.ndarray:
         color = RED if strong else ORANGE
         cv2.rectangle(out, (x1, y1), (x2, y2), color, 2)
         _label(out, f"mite {c:.2f}", x1, y1, color)
+    if counts is None:
+        return out
     lines = [
         f"frame: bees {counts['bees']}  mites {counts['mites']}",
         f"total: bees {counts['bees_total']}  bees with mites {counts['infested_total']}  mites {counts['mites_total']}",
@@ -71,10 +87,11 @@ def annotate_frame(img, bees, mites, counts: dict) -> np.ndarray:
     return out
 
 
-def run(images: list[Path] | Path, bee_weights: Path | None, mite_weights: Path, out: Path, conf: float, weak_conf: float, bee_conf: float, imgsz_bee: int, imgsz_mite: int, margin: float, device, fps: int, max_frames: int | None, save_frames: str = "all", video: bool = True) -> dict:
+def run(images: list[Path] | Path, bee_weights: Path | None, mite_weights: Path, out: Path, conf: float, weak_conf: float, bee_conf: float, imgsz_bee: int, imgsz_mite: int, margin: float, device, fps: int, max_frames: int | None, save_frames: str = "all", video: bool = True, overlay: bool = True, draw_min_side: int = 0) -> dict:
     """``bee_weights=None`` skips stage 1 and treats every image as one bee crop (for
     datasets that are already single-bee crops). ``save_frames`` is ``all``,
-    ``detections`` (only frames with at least a weak detection) or ``none``."""
+    ``detections`` (only frames with at least a weak detection) or ``none``.
+    ``draw_min_side`` upscales small images before drawing so labels stay legible."""
     from ultralytics import YOLO
 
     out.mkdir(parents=True, exist_ok=True)
@@ -121,7 +138,8 @@ def run(images: list[Path] | Path, bee_weights: Path | None, mite_weights: Path,
         counts = {"bees": len(bees), "mites": n_strong, **totals, "rate": 100 * totals["mites_total"] / max(totals["bees_total"], 1)}
         want_frame = save_frames == "all" or (save_frames == "detections" and mites)
         if want_frame or video:
-            frame = annotate_frame(img, [] if bee_model is None else bees, mites, counts)
+            d_img, d_bees, d_mites = upscale_for_drawing(img, [] if bee_model is None else bees, mites, draw_min_side)
+            frame = annotate_frame(d_img, d_bees, d_mites, counts if overlay else None)
         if want_frame:
             cv2.imwrite(str(out / "frames" / f"{i:04d}_{p.stem}.jpg"), frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
         if video:
@@ -147,6 +165,8 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--mite-weights", type=Path, required=True)
     parser.add_argument("--save-frames", choices=("all", "detections", "none"), default="all")
     parser.add_argument("--no-video", action="store_true")
+    parser.add_argument("--no-overlay", action="store_true", help="boxes only, no running totals")
+    parser.add_argument("--draw-min-side", type=int, default=0, help="upscale images smaller than this before drawing")
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--conf", type=float, default=0.30)
     parser.add_argument("--weak-conf", type=float, default=0.10)
@@ -158,7 +178,7 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--fps", type=int, default=3)
     parser.add_argument("--max-frames", type=int, default=None)
     args = parser.parse_args(argv)
-    run(args.images, args.bee_weights, args.mite_weights, args.out, args.conf, args.weak_conf, args.bee_conf, args.imgsz_bee, args.imgsz_mite, args.margin, args.device, args.fps, args.max_frames, save_frames=args.save_frames, video=not args.no_video)
+    run(args.images, args.bee_weights, args.mite_weights, args.out, args.conf, args.weak_conf, args.bee_conf, args.imgsz_bee, args.imgsz_mite, args.margin, args.device, args.fps, args.max_frames, save_frames=args.save_frames, video=not args.no_video, overlay=not args.no_overlay, draw_min_side=args.draw_min_side)
 
 
 if __name__ == "__main__":
