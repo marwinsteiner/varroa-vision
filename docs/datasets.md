@@ -97,13 +97,34 @@ record 10231845. 64 images of 8064 x 6048 px with mite annotations, plus trained
 and code (github.com/jodivaso/varroa_detector). Different modality (natural mite fall
 over 24-72 h), not needed for the on-bee counter, but a cheap second mode for the app.
 
-## Roboflow Universe
+## Roboflow Universe (surveyed 2026-10-04)
 
-Over 100 community datasets match "varroa". Quality and licensing vary and downloads
-need an API key. Candidates to inspect once the first model exists:
-abc-seffg/varroa-mite-detec (972 images), dip-project-bvluv/varroa-detection-demo (984),
-beesap2025panthers/varroa-mite-detector, honeybee/honeybee_varroamite,
-beproj/varroa-mites-detection--train-set.
+126 projects carry a `varroa` class. Downloads need a free account's API key
+(`python -m varroa_vision.data.roboflow --list`). Almost all of the large ones are one of
+three things, none of which adds a new domain:
+
+- re-uploads or forks of VarroaDataset's tunnel crops, recognisable by file names
+  containing `-mp4-bee_id_` (workspace `varroa-j8231`: Varroa 13.5k, varroa-2 8.7k,
+  varroa4other 4k; BeeAI 4.1k; VarroaDetection_2 1k; honeybee by jana 2k;
+  VarroaDetection by metinbarlas 2.2k);
+- sticky-board photos of fallen mites (Alice's beehive 6.6k, Sammy's varroa 1.7k);
+- macro internet photos of single mites or single bees.
+
+What is worth taking:
+
+| project | images | why |
+|---|---|---|
+| andrew-hofer-1qh7e/bees-ytrmp | 6,423 | Phone-style photos of combs with many bees, boxes for bee, pollen, queen, queen cell. The best public stand-in for the app's stage 1 domain. Its `varroa` images are mostly VarroaDataset crops plus a few internet photos. |
+| sammy-crveu/var_sahi | 665 | varroa only; mixed sticky boards and some internet comb photos with mites on bees. |
+| bolo-q0wr5/beehive-detection | 436 | internet images, bees and varroa mites, Public Domain. |
+| beproj "internet images" | 62 | internet photos of bees with mites. |
+
+After removing VarroaDataset re-uploads, the public supply of mite boxes on bees that
+are not from the tunnel camera is in the low hundreds, spread over internet photos of
+unknown provenance. The dataset that matches the use case best, phone photos of hive
+frames with bee masks and about 600 varroa boxes (Nested object detection using Mask
+R-CNN, Neural Computing and Applications 2024), is not public: "available from the
+corresponding author on reasonable request".
 
 ## BeeDataset (TensorFlow Datasets `bee_dataset`)
 
