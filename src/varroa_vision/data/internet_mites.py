@@ -134,13 +134,15 @@ def windows_for_image(W, H, mites, bees, rng: random.Random, margin: float = 0.1
     return wins
 
 
-def build(project_dirs: dict[str, Path], out_dir: Path, test_fraction: float = 0.2, seed: int = 0) -> Path:
+def build(project_dirs: dict[str, Path], out_dir: Path, test_fraction: float = 0.2, seed: int = 0, val_fraction: float = 0.1) -> Path:
+    """``val_fraction`` of the non-test source images become a val split (hashed from the
+    train portion, so the test split is unchanged by the choice of val_fraction)."""
     rng = random.Random(seed)
     out_dir = Path(out_dir)
-    for s in ("train", "test"):
+    for s in ("train", "val", "test"):
         (out_dir / "images" / s).mkdir(parents=True, exist_ok=True)
         (out_dir / "labels" / s).mkdir(parents=True, exist_ok=True)
-    rows, stats = [], {"train": Counter(), "test": Counter()}
+    rows, stats = [], {"train": Counter(), "val": Counter(), "test": Counter()}
     for source, pdir in project_dirs.items():
         for img_path, lbl_path, names in unique_images(Path(pdir)):
             img = cv2.imread(str(img_path))
@@ -154,6 +156,8 @@ def build(project_dirs: dict[str, Path], out_dir: Path, test_fraction: float = 0
                 continue
             stem = source_stem(img_path.name)
             split = split_for(f"{source}/{stem}", test_fraction, seed)
+            if split == "train" and val_fraction > 0 and split_for(f"val:{source}/{stem}", val_fraction / (1 - test_fraction), seed) == "test":
+                split = "val"
             for j, (kind, win) in enumerate(windows_for_image(W, H, mites, bees, rng)):
                 x1, y1, x2, y2 = win
                 if x2 - x1 < 32 or y2 - y1 < 32:
@@ -176,7 +180,7 @@ def build(project_dirs: dict[str, Path], out_dir: Path, test_fraction: float = 0
         w.writerows(rows)
     (out_dir / "stats.json").write_text(json.dumps({s: dict(c) for s, c in stats.items()}, indent=2))
     data_yaml = out_dir / "data.yaml"
-    data_yaml.write_text(yaml.safe_dump({"path": str(out_dir.resolve()), "train": "images/train", "val": "images/test", "test": "images/test", "names": CLASS_NAMES}, sort_keys=False))
+    data_yaml.write_text(yaml.safe_dump({"path": str(out_dir.resolve()), "train": "images/train", "val": "images/val", "test": "images/test", "names": CLASS_NAMES}, sort_keys=False))
     for s, c in stats.items():
         logger.info("{:5s} {}", s, dict(c))
     return data_yaml

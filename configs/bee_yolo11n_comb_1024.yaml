@@ -1,0 +1,34 @@
+# Stage 1 v3: as bee_yolo11n_comb.yaml at 1024 px. The Hofer comb photos hold 20 to 77
+# bees per 640 px image (a bee about 65 px long); at 1024 px a bee is about 100 px,
+# which is the scale the BEEHIVE bottom camera trained at.
+
+model: yolo11n.pt
+data: datasets/bees_comb/data.yaml
+project: runs/bee
+name: yolo11n_1024_comb
+
+imgsz: 1024
+epochs: 60
+batch: 16
+patience: 20
+optimizer: auto
+lr0: 0.01
+cos_lr: true
+warmup_epochs: 3
+close_mosaic: 10
+seed: 0
+deterministic: true
+workers: 8
+plots: true
+
+fliplr: 0.5
+flipud: 0.5
+degrees: 20.0
+scale: 0.5
+translate: 0.1
+hsv_h: 0.015
+hsv_s: 0.6
+hsv_v: 0.5
+mosaic: 1.0
+mixup: 0.0
+erasing: 0.0

@@ -140,7 +140,7 @@ def evaluate(weights: Path, data_yaml: Path, split: str, imgsz: int, device, bat
         pd.DataFrame(per_source).to_csv(out_dir / "bee_level_by_source.csv", index=False)
         summary["bee_level_by_source"] = per_source
         for r in per_source:
-            logger.info("  {:16s} n {:5d} sens {:.3f} spec {:.3f}", r["source"], r["bees"], r["sensitivity"], r["specificity"])
+            logger.info("  {:16s} n {:5d} sens {:.3f} spec {:.3f}", r["source"], int(r["bees"]), r["sensitivity"], r["specificity"])
     (out_dir / "summary.json").write_text(json.dumps(summary, indent=2))
     logger.info("bee level, best F1 at conf {:.2f}: sens {:.3f} spec {:.3f} prec {:.3f} F1 {:.3f}", best["conf"], best["sensitivity"], best["specificity"], best["precision"], best["f1"])
     logger.info("at conf {:.2f}: sens {:.3f} spec {:.3f} prec {:.3f} F1 {:.3f}; infested bees true {} pred {}", chosen["conf"], chosen["sensitivity"], chosen["specificity"], chosen["precision"], chosen["f1"], int(chosen["infested_true"]), int(chosen["infested_pred"]))

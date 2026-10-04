@@ -61,7 +61,7 @@ def test_build_internet_mites(tmp_path: Path):
         "img3.jpg": ((900, 700), "0 0.5 0.5 0.3 0.3\n1 0.52 0.5 0.03 0.03\n"),
     })
     out = tmp_path / "internet"
-    data_yaml = internet_mites.build({"src1": p1, "src2": p2}, out, test_fraction=0.0)
+    data_yaml = internet_mites.build({"src1": p1, "src2": p2}, out, test_fraction=0.0, val_fraction=0.0)
     with (out / "meta.csv").open() as fh:
         rows = list(csv.DictReader(fh))
     kinds = {r["kind"] for r in rows}
