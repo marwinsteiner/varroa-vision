@@ -109,14 +109,16 @@ def clamp_window(cx, cy, side, W, H):
     return x1, y1, int(x1 + side), int(y1 + side)
 
 
-def windows_for_image(W, H, mites, bees, rng: random.Random, margin: float = 0.15, k_range=(6.0, 10.0), n_neg: int = 2, min_side: int = 160):
-    """Yield (kind, window) for one image: bee crops, mite windows, negative windows."""
+def windows_for_image(W, H, mites, bees, rng: random.Random, margin: float = 0.15, k_range=(6.0, 10.0), n_neg: int = 2, min_side: int = 160, max_mite_windows: int = 10):
+    """Yield (kind, window) for one image: bee crops, mite windows, negative windows.
+    Mite windows are capped per image so sticky boards with dozens of mites do not
+    swamp the comb photos."""
     wins = []
     for x1, y1, x2, y2 in bees:
         mx, my = margin * (x2 - x1), margin * (y2 - y1)
         wins.append(("bee", (int(max(0, x1 - mx)), int(max(0, y1 - my)), int(min(W, x2 + mx)), int(min(H, y2 + my)))))
     if not bees:
-        for x1, y1, x2, y2 in mites:
+        for x1, y1, x2, y2 in rng.sample(mites, min(len(mites), max_mite_windows)):
             side = max(min_side, rng.uniform(*k_range) * max(x2 - x1, y2 - y1))
             cx = (x1 + x2) / 2 + rng.uniform(-0.25, 0.25) * side
             cy = (y1 + y2) / 2 + rng.uniform(-0.25, 0.25) * side

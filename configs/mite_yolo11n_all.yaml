@@ -1,0 +1,35 @@
+# Stage 2 v10: the mosaic recipe on three domains: VarroaDataset train, pseudo-labelled
+# EV2 train videos, and internet photos (bee crops and mite windows). val/test remain
+# VarroaDataset's official splits; EV2 held-out videos and the internet test split are
+# the out-of-domain checks.
+
+model: yolo11n.pt
+data: datasets/mite_all/data.yaml
+project: runs/mite
+name: yolo11n_320_all
+
+imgsz: 320
+epochs: 60
+batch: 64
+patience: 25
+optimizer: auto
+lr0: 0.01
+cos_lr: true
+warmup_epochs: 3
+close_mosaic: 10
+seed: 0
+deterministic: true
+workers: 8
+plots: true
+
+fliplr: 0.5
+flipud: 0.5
+degrees: 15.0
+scale: 0.3
+translate: 0.1
+hsv_h: 0.015
+hsv_s: 0.5
+hsv_v: 0.4
+mosaic: 1.0
+mixup: 0.0
+erasing: 0.0
