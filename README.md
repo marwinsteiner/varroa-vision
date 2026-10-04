@@ -43,7 +43,9 @@ work and the open sampling-methodology question.
 - [x] Stage 2 recipe settled over 11 runs: yolo11n, 320 px, mosaic; test mAP50 0.80, bee-level sensitivity 0.84 / specificity 0.96, rate within 5% (`docs/results.md`)
 - [x] Date-grouped split (honest in-domain): test mAP50 0.70, bee-level sensitivity 0.87 / specificity 0.97
 - [x] Cross-camera test on held-out EV2 videos: 0% sensitivity for VarroaDataset-only models, 14% after adding pseudo-labelled EV2 crops. The domain gap, not the recipe, is the open problem
-- [x] TFLite export (float32 and INT8, 2.9 MB) with bee-level parity to the PyTorch model
+- [x] Third domain from internet photos (Roboflow Universe, 1,062 source images) and model selection on a mixed validation set: internet held-out mAP50 0.78, EV2 held-out sensitivity 0.34 at zero false positives, in-domain unchanged
+- [x] Stage 1 on phone comb photos: the in-hive-camera model scores 0.008 mAP50 there; 160 comb photos lift it to 0.30. More comb photos are the lever
+- [x] TFLite export (float32 and INT8, 2.9 MB) with bee-level parity to the PyTorch model, plus a model card with the runtime constants
 - [x] Stage 1 run 1 on BEEHIVE: mAP50 0.95 on test (in-hive cameras, not phone footage)
 - [x] Tracking + per-bee aggregation + stopping rule (unit-tested with fake models; no real comb video yet)
 - [ ] Export to TFLite and build the Android app
