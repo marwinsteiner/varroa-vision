@@ -226,7 +226,25 @@ in training (held out by source image, same four sources), while the EV2 camera 
 not benefit and loses a little specificity. Each camera is its own domain; data from
 the camera that matters is what moves the number, nothing else does. Run `all` picked
 its checkpoint on VarroaDataset val alone (epoch 6 of 31); run `all_mixedval` adds the
-internet val split to validation.
+internet val split to validation and ran the full 60 epochs.
+
+### Run `all_mixedval`: same data, validation on both domains. Current model.
+
+| test set | box mAP50 | bee-level at conf 0.30 |
+|---|---|---|
+| VarroaDataset test (official) | 0.778 | sens 0.834, spec 0.974, rate 28.7 vs 31.3 per 100 |
+| internet photos, held-out source images | 0.778 (mAP50-95 0.555) | sens 0.942, spec 0.948, rate 165.5 vs 160.6 per 100 |
+| EV2 held-out videos | n/a (no boxes) | sens 0.336, spec 1.000 (0.392 at conf 0.05) |
+
+Per source on the internet test crops at 0.30: BEPROJ comb photos sens 0.78 (23
+positives), bolo 1.00 / spec 0.75, Hofer 0.94 / 0.96, var_sahi 0.94 / 1.00. The same
+data with VarroaDataset-only model selection (run `all`) gave BEPROJ 0.30 and EV2 0.12,
+so checkpoint selection on a mixed validation set is worth as much as the extra data.
+EV2 held-out sensitivity, the one number that never moved before, went from 0.14 to
+0.34 without a single EV2 held-out image in training, and with no false positives.
+
+In-domain the model gives up two points of mAP50 against the single-domain run
+(0.78 vs 0.80) and nothing at bee level. It is the release candidate for v0.2.0.
 
 ## Stage 1: bee detector on BEEHIVE (frame + bottom merged)
 
