@@ -1,7 +1,12 @@
 import numpy as np
 
 from varroa_vision.pipeline.video import crop_with_margin
-from varroa_vision.visualize import annotate_frame, crop_box_to_frame, crop_origin, upscale_for_drawing
+from varroa_vision.visualize import (
+    annotate_frame,
+    crop_box_to_frame,
+    crop_origin,
+    upscale_for_drawing,
+)
 
 
 def test_upscale_for_drawing_scales_boxes():
