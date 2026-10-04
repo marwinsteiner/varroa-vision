@@ -36,7 +36,7 @@ def crop_with_margin(img: np.ndarray, xyxy, margin: float = 0.1) -> np.ndarray:
     x1, y1, x2, y2 = (float(v) for v in xyxy)
     mx, my = margin * (x2 - x1), margin * (y2 - y1)
     xa, ya = max(0, int(x1 - mx)), max(0, int(y1 - my))
-    xb, yb = min(w, int(round(x2 + mx))), min(h, int(round(y2 + my)))
+    xb, yb = min(w, round(x2 + mx)), min(h, round(y2 + my))
     return img[ya:yb, xa:xb]
 
 
@@ -53,8 +53,9 @@ def iter_tracked_bees(bee_model, source, imgsz: int = 640, conf: float = 0.3, tr
         yield frame_idx, r.orig_img, [(int(t), tuple(b)) for t, b in zip(ids, xyxy)]
 
 
-def scan(bee_model, mite_model, source, rule: AggregationRule = AggregationRule(), imgsz_bee: int = 640, imgsz_mite: int = 320, bee_conf: float = 0.3, margin: float = 0.1, device=None, vid_stride: int = 1, mite_batch: int = 32) -> ScanEstimate:
+def scan(bee_model, mite_model, source, rule: AggregationRule | None = None, imgsz_bee: int = 640, imgsz_mite: int = 320, bee_conf: float = 0.3, margin: float = 0.1, device=None, vid_stride: int = 1, mite_batch: int = 32) -> ScanEstimate:
     """Run both stages over ``source`` and return the aggregated estimate."""
+    rule = rule or AggregationRule()
     records: list[tuple[int, FrameObs]] = []
     min_conf = min(rule.conf, rule.conf_high) * 0.5  # keep weak detections for the sweep
     for frame_idx, frame, bees in iter_tracked_bees(bee_model, source, imgsz_bee, bee_conf, device=device, vid_stride=vid_stride):

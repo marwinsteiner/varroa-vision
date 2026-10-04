@@ -24,7 +24,7 @@ class FakeBeeModel:
             else:
                 xyxy = torch.tensor([[100.0 + i, 100.0, 220.0 + i, 200.0]])
                 ids = torch.tensor([1.0])
-            yield SimpleNamespace(orig_img=img, boxes=SimpleNamespace(id=ids, xyxy=xyxy, __len__=lambda self=None: len(ids)))
+            yield SimpleNamespace(orig_img=img, boxes=SimpleNamespace(id=ids, xyxy=xyxy))
 
 
 class FakeMiteModel:

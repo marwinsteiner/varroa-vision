@@ -31,12 +31,11 @@ def crop_box_to_frame(box_xyxy_in_crop, crop_origin_xy) -> tuple[int, int, int, 
     """Map a box from crop pixel coordinates back to frame coordinates."""
     ox, oy = crop_origin_xy
     x1, y1, x2, y2 = box_xyxy_in_crop
-    return int(round(x1 + ox)), int(round(y1 + oy)), int(round(x2 + ox)), int(round(y2 + oy))
+    return round(x1 + ox), round(y1 + oy), round(x2 + ox), round(y2 + oy)
 
 
 def crop_origin(img_shape, xyxy, margin: float) -> tuple[int, int]:
     """Top-left corner of ``crop_with_margin`` for the same inputs."""
-    h, w = img_shape[:2]
     x1, y1, x2, y2 = (float(v) for v in xyxy)
     return max(0, int(x1 - margin * (x2 - x1))), max(0, int(y1 - margin * (y2 - y1)))
 

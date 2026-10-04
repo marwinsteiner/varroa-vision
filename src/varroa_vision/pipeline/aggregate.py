@@ -43,6 +43,9 @@ class AggregationRule:
     min_bee_px: float = 60.0
 
 
+DEFAULT_RULE = AggregationRule()
+
+
 @dataclass
 class TrackVerdict:
     track_id: int
@@ -81,7 +84,7 @@ def judge_track(track_id: int, obs: list[FrameObs], rule: AggregationRule) -> Tr
     hits = sum(h > 0 for h in hits_per_frame)
     max_conf = max((c for o in obs for c in o.mite_confs), default=0.0)
     infested = counted and (hits >= rule.min_hits or max_conf >= rule.conf_high)
-    mites = int(round(_median([h for h in hits_per_frame if h > 0]))) if infested else 0
+    mites = round(_median([h for h in hits_per_frame if h > 0])) if infested else 0
     return TrackVerdict(track_id, frames, med_px, counted, infested, max(mites, int(infested)), hits, max_conf)
 
 
@@ -96,7 +99,7 @@ def wilson_interval(successes: int, trials: int, z: float = 1.959964) -> tuple[f
     return (max(0.0, centre - half), min(1.0, centre + half))
 
 
-def aggregate(tracks: dict[int, list[FrameObs]], rule: AggregationRule = AggregationRule()) -> ScanEstimate:
+def aggregate(tracks: dict[int, list[FrameObs]], rule: AggregationRule = DEFAULT_RULE) -> ScanEstimate:
     """Turn per-track observations into a colony estimate with a Wilson interval on the
     infested-bee proportion (mites per 100 bees uses the mite count; its interval is
     approximated by scaling the infested-bee interval by mites per infested bee)."""
