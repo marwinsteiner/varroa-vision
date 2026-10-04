@@ -21,6 +21,7 @@ import cv2
 import numpy as np
 from loguru import logger
 
+from varroa_vision.pipeline.tiled import predict_tiled
 from varroa_vision.pipeline.video import crop_with_margin
 
 GREEN, RED, ORANGE, WHITE, BLACK = (80, 200, 80), (40, 40, 230), (30, 150, 255), (255, 255, 255), (0, 0, 0)
@@ -86,11 +87,12 @@ def annotate_frame(img, bees, mites, counts: dict | None) -> np.ndarray:
     return out
 
 
-def run(images: list[Path] | Path, bee_weights: Path | None, mite_weights: Path, out: Path, conf: float, weak_conf: float, bee_conf: float, imgsz_bee: int, imgsz_mite: int, margin: float, device, fps: int, max_frames: int | None, save_frames: str = "all", video: bool = True, overlay: bool = True, draw_min_side: int = 0) -> dict:
+def run(images: list[Path] | Path, bee_weights: Path | None, mite_weights: Path, out: Path, conf: float, weak_conf: float, bee_conf: float, imgsz_bee: int, imgsz_mite: int, margin: float, device, fps: int, max_frames: int | None, save_frames: str = "all", video: bool = True, overlay: bool = True, draw_min_side: int = 0, tile: int = 0) -> dict:
     """``bee_weights=None`` skips stage 1 and treats every image as one bee crop (for
     datasets that are already single-bee crops). ``save_frames`` is ``all``,
     ``detections`` (only frames with at least a weak detection) or ``none``.
-    ``draw_min_side`` upscales small images before drawing so labels stay legible."""
+    ``draw_min_side`` upscales small images before drawing so labels stay legible.
+    ``tile`` > 0 runs stage 1 on overlapping tiles of that size (large stills)."""
     from ultralytics import YOLO
 
     out.mkdir(parents=True, exist_ok=True)
@@ -112,6 +114,9 @@ def run(images: list[Path] | Path, bee_weights: Path | None, mite_weights: Path,
             h, w = img.shape[:2]
             bees = [((0.0, 0.0, float(w), float(h)), 1.0)]
             use_margin = 0.0
+        elif tile:
+            bees = predict_tiled(bee_model, img, tile=tile, overlap=0.2, conf=bee_conf, device=device, imgsz=imgsz_bee)
+            use_margin = margin
         else:
             r = bee_model.predict(img, imgsz=imgsz_bee, conf=bee_conf, device=device, verbose=False)[0]
             bees = [(tuple(b), float(c)) for b, c in zip(r.boxes.xyxy.tolist(), r.boxes.conf.tolist())] if r.boxes is not None else []
@@ -166,6 +171,7 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--no-video", action="store_true")
     parser.add_argument("--no-overlay", action="store_true", help="boxes only, no running totals")
     parser.add_argument("--draw-min-side", type=int, default=0, help="upscale images smaller than this before drawing")
+    parser.add_argument("--tile", type=int, default=0, help="run stage 1 on overlapping tiles of this size (large stills; 0 = off)")
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--conf", type=float, default=0.30)
     parser.add_argument("--weak-conf", type=float, default=0.10)
@@ -177,7 +183,7 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--fps", type=int, default=3)
     parser.add_argument("--max-frames", type=int, default=None)
     args = parser.parse_args(argv)
-    run(args.images, args.bee_weights, args.mite_weights, args.out, args.conf, args.weak_conf, args.bee_conf, args.imgsz_bee, args.imgsz_mite, args.margin, args.device, args.fps, args.max_frames, save_frames=args.save_frames, video=not args.no_video, overlay=not args.no_overlay, draw_min_side=args.draw_min_side)
+    run(args.images, args.bee_weights, args.mite_weights, args.out, args.conf, args.weak_conf, args.bee_conf, args.imgsz_bee, args.imgsz_mite, args.margin, args.device, args.fps, args.max_frames, save_frames=args.save_frames, video=not args.no_video, overlay=not args.no_overlay, draw_min_side=args.draw_min_side, tile=args.tile)
 
 
 if __name__ == "__main__":
