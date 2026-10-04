@@ -71,13 +71,18 @@ def annotate_frame(img, bees, mites, counts: dict) -> np.ndarray:
     return out
 
 
-def run(images: Path, bee_weights: Path, mite_weights: Path, out: Path, conf: float, weak_conf: float, bee_conf: float, imgsz_bee: int, imgsz_mite: int, margin: float, device, fps: int, max_frames: int | None) -> dict:
+def run(images: list[Path] | Path, bee_weights: Path | None, mite_weights: Path, out: Path, conf: float, weak_conf: float, bee_conf: float, imgsz_bee: int, imgsz_mite: int, margin: float, device, fps: int, max_frames: int | None, save_frames: str = "all", video: bool = True) -> dict:
+    """``bee_weights=None`` skips stage 1 and treats every image as one bee crop (for
+    datasets that are already single-bee crops). ``save_frames`` is ``all``,
+    ``detections`` (only frames with at least a weak detection) or ``none``."""
     from ultralytics import YOLO
 
     out.mkdir(parents=True, exist_ok=True)
     (out / "frames").mkdir(exist_ok=True)
-    bee_model, mite_model = YOLO(str(bee_weights)), YOLO(str(mite_weights))
-    paths = sorted(p for p in Path(images).iterdir() if p.suffix.lower() in IMAGE_SUFFIXES)
+    bee_model = YOLO(str(bee_weights)) if bee_weights else None
+    mite_model = YOLO(str(mite_weights))
+    dirs = [Path(images)] if isinstance(images, (str, Path)) else [Path(d) for d in images]
+    paths = sorted(p for d in dirs for p in d.iterdir() if p.suffix.lower() in IMAGE_SUFFIXES)
     if max_frames:
         paths = paths[:max_frames]
     totals = {"bees_total": 0, "infested_total": 0, "mites_total": 0}
@@ -87,13 +92,19 @@ def run(images: Path, bee_weights: Path, mite_weights: Path, out: Path, conf: fl
         img = cv2.imread(str(p))
         if img is None:
             continue
-        r = bee_model.predict(img, imgsz=imgsz_bee, conf=bee_conf, device=device, verbose=False)[0]
-        bees = [(tuple(b), float(c)) for b, c in zip(r.boxes.xyxy.tolist(), r.boxes.conf.tolist())] if r.boxes is not None else []
+        if bee_model is None:
+            h, w = img.shape[:2]
+            bees = [((0.0, 0.0, float(w), float(h)), 1.0)]
+            use_margin = 0.0
+        else:
+            r = bee_model.predict(img, imgsz=imgsz_bee, conf=bee_conf, device=device, verbose=False)[0]
+            bees = [(tuple(b), float(c)) for b, c in zip(r.boxes.xyxy.tolist(), r.boxes.conf.tolist())] if r.boxes is not None else []
+            use_margin = margin
         mites = []
         infested = 0
         if bees:
-            crops = [crop_with_margin(img, xyxy, margin) for xyxy, _ in bees]
-            origins = [crop_origin(img.shape, xyxy, margin) for xyxy, _ in bees]
+            crops = [crop_with_margin(img, xyxy, use_margin) for xyxy, _ in bees]
+            origins = [crop_origin(img.shape, xyxy, use_margin) for xyxy, _ in bees]
             results = mite_model.predict(crops, imgsz=imgsz_mite, conf=weak_conf, device=device, verbose=False)
             for mr, origin in zip(results, origins):
                 strong_here = 0
@@ -108,15 +119,19 @@ def run(images: Path, bee_weights: Path, mite_weights: Path, out: Path, conf: fl
         totals["infested_total"] += infested
         totals["mites_total"] += n_strong
         counts = {"bees": len(bees), "mites": n_strong, **totals, "rate": 100 * totals["mites_total"] / max(totals["bees_total"], 1)}
-        frame = annotate_frame(img, bees, mites, counts)
-        cv2.imwrite(str(out / "frames" / f"{i:04d}_{p.stem}.jpg"), frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
-        if writer is None:
-            h, w = frame.shape[:2]
-            writer = cv2.VideoWriter(str(out / "annotated.mp4"), cv2.VideoWriter_fourcc(*"mp4v"), fps, (w, h))
-        if frame.shape[:2] != (h, w):
-            frame = cv2.resize(frame, (w, h))
-        writer.write(frame)
-        per_frame.append({"index": i, "image": p.name, "bees": len(bees), "infested": infested, "mites": n_strong, "weak_mites": len(mites) - n_strong, "mite_confs": [round(m[1], 3) for m in mites]})
+        want_frame = save_frames == "all" or (save_frames == "detections" and mites)
+        if want_frame or video:
+            frame = annotate_frame(img, [] if bee_model is None else bees, mites, counts)
+        if want_frame:
+            cv2.imwrite(str(out / "frames" / f"{i:04d}_{p.stem}.jpg"), frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
+        if video:
+            if writer is None:
+                h, w = frame.shape[:2]
+                writer = cv2.VideoWriter(str(out / "annotated.mp4"), cv2.VideoWriter_fourcc(*"mp4v"), fps, (w, h))
+            if frame.shape[:2] != (h, w):
+                frame = cv2.resize(frame, (w, h))
+            writer.write(frame)
+        per_frame.append({"index": i, "image": p.name, "dir": p.parent.name, "bees": len(bees), "infested": infested, "mites": n_strong, "weak_mites": len(mites) - n_strong, "mite_confs": [round(m[1], 3) for m in mites]})
     if writer is not None:
         writer.release()
     summary = {"frames": len(per_frame), "conf": conf, "weak_conf": weak_conf, **totals, "rate_per100": 100 * totals["mites_total"] / max(totals["bees_total"], 1), "per_frame": per_frame}
@@ -127,9 +142,11 @@ def run(images: Path, bee_weights: Path, mite_weights: Path, out: Path, conf: fl
 
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--images", type=Path, required=True)
-    parser.add_argument("--bee-weights", type=Path, required=True)
+    parser.add_argument("--images", type=Path, nargs="+", required=True, help="one or more folders of frames")
+    parser.add_argument("--bee-weights", type=Path, default=None, help="stage 1 weights; omit for datasets of single-bee crops")
     parser.add_argument("--mite-weights", type=Path, required=True)
+    parser.add_argument("--save-frames", choices=("all", "detections", "none"), default="all")
+    parser.add_argument("--no-video", action="store_true")
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--conf", type=float, default=0.30)
     parser.add_argument("--weak-conf", type=float, default=0.10)
@@ -141,7 +158,7 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--fps", type=int, default=3)
     parser.add_argument("--max-frames", type=int, default=None)
     args = parser.parse_args(argv)
-    run(args.images, args.bee_weights, args.mite_weights, args.out, args.conf, args.weak_conf, args.bee_conf, args.imgsz_bee, args.imgsz_mite, args.margin, args.device, args.fps, args.max_frames)
+    run(args.images, args.bee_weights, args.mite_weights, args.out, args.conf, args.weak_conf, args.bee_conf, args.imgsz_bee, args.imgsz_mite, args.margin, args.device, args.fps, args.max_frames, save_frames=args.save_frames, video=not args.no_video)
 
 
 if __name__ == "__main__":
