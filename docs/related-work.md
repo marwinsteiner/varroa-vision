@@ -42,6 +42,33 @@ publish their models or their calibration against alcohol-wash counts.
 See `docs/sampling-methodology.md` for how these translate into a scanning protocol and
 the open questions.
 
+## Internal note: "Server-to-Edge Fine-Tuning Workflow" (reviewed 2026-10-04)
+
+An outline received for this project proposes a teacher-student loop: a large server
+model (YOLO11 XL or Grounding DINO) with sliced inference labels unlabelled phone
+photos, the pseudo-labels (confidence above 0.75) fine-tune YOLO11n at 640 px, the
+result ships as INT8 TFLite with a metadata file, and an over-the-air loop retrains
+weekly on low-confidence frames uploaded by the app.
+
+What of it is already here: pseudo-labelling with a precision-checked threshold
+(`data/ev2_pseudo.py`, precision 0.999 measured on EV2 at 0.25, so the 0.75 in the
+note would only cost recall), the YOLO11n mosaic recipe, INT8 TFLite export with
+calibration and a parity check (`export.py`).
+
+What was adopted from it: tiled inference for large stills (`pipeline/tiled.py`,
+`visualize.py --tile`), because a whole-comb photo at 640 px leaves a bee at 20 px and
+a mite at nothing, and a `model_card.json` next to every export with input size,
+thresholds, classes and aggregation defaults so the app does not hard-code them.
+
+What was not adopted, and why: the accuracy claims (mAP50 from 72-78% to 91-94%, 30-40%
+fewer misses, 15-30 ms per frame) carry no source and contradict the one measurement
+that matters here, 14% cross-camera sensitivity; a bigger teacher cannot label what no
+model has learned, and a zero-shot detector such as Grounding DINO has no reason to
+localise a 1.5 mm mite. The teacher idea is testable once a teacher exists: train
+yolo11m/x on the same data and check whether its held-out EV2 and internet sensitivity
+beats the nano before using it as a labeller (roadmap). The over-the-air loop is an app
+design item and is noted in the roadmap.
+
 ## Caveat on visual counting
 
 An alcohol wash counts every phoretic mite on the sampled bees. A camera only counts the

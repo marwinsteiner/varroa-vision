@@ -9,6 +9,9 @@ Ordered by what unblocks the most.
   operating threshold on val.
 - Repeat on the date-grouped split to get an honest held-out-day number.
 - Ablations worth one run each: imgsz 416, YOLO11s, no vertical flip, no mosaic.
+- Teacher test: train yolo11m or yolo11x on the same domains and compare held-out EV2
+  and internet-photo sensitivity with the nano. Only if the larger model is clearly
+  better out of domain does it earn a role as pseudo-labeller for unlabelled footage.
 - Export TFLite float16 and check that the exported model reproduces the PyTorch
   bee-level numbers on the test split.
 
@@ -37,6 +40,13 @@ Ordered by what unblocks the most.
 - Live overlay of tracked bees and running count; the sequential stopping rule from
   `docs/sampling-methodology.md`; a session summary per hive.
 - Offline only. No account, no upload, except an opt-in to contribute annotated clips.
+- Runtime constants (input size, thresholds, aggregation rule) come from the
+  `model_card.json` written at export, and the app checks a versioned manifest so a
+  retrained model can be delivered without a store release.
+- Photo mode for stills: stage 1 on overlapping tiles (`pipeline/tiled.py`) so a
+  whole-comb photo keeps bees at training scale.
+- Later, with consent: low-confidence frames uploaded for review and retraining, the
+  improvement loop the field data needs.
 
 ## 5. Field calibration
 
