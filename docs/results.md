@@ -208,6 +208,26 @@ plus all mite-free EV2 crops into a second training domain with a video-grouped 
 A detector that works on a beekeeper's phone must survive this kind of shift, so the
 EV2 held-out videos become a standing test alongside VarroaDataset test.
 
+## Stage 2 with a third domain: internet photos (2026-10-04)
+
+Four Roboflow Universe projects were mined for photos that are neither tunnel crops nor
+sticky boards (`docs/datasets.md`), yielding 1,062 unique source images with mite boxes
+from 4 sources, turned into bee crops and mite-centred windows
+(`data/internet_mites.py`): 3,188 train, 380 val, 806 test crops, split by source image.
+Run `all` trains the mosaic recipe on VarroaDataset + EV2 pseudo + internet train.
+
+| model | VarroaDataset test mAP50 | internet test mAP50 | internet test bee-level sens / spec (rate-matched conf) | EV2 held-out sens / spec at 0.30 |
+|---|---|---|---|---|
+| combined (VarroaDataset + EV2 pseudo) | 0.80 | 0.12 | 0.38 / 0.89 (0.05) | 0.143 / 1.000 |
+| all (+ internet photos) | 0.79 (best epoch 6) | 0.68 | 0.85 / 0.90 (0.25) | 0.115 / 0.991 |
+
+Reading: the internet-photo domain goes from unusable to usable once its own photos are
+in training (held out by source image, same four sources), while the EV2 camera does
+not benefit and loses a little specificity. Each camera is its own domain; data from
+the camera that matters is what moves the number, nothing else does. Run `all` picked
+its checkpoint on VarroaDataset val alone (epoch 6 of 31); run `all_mixedval` adds the
+internet val split to validation.
+
 ## Stage 1: bee detector on BEEHIVE (frame + bottom merged)
 
 ### Run 1: `configs/bee_yolo11n.yaml` (640 px), 2026-10-03
@@ -221,3 +241,19 @@ EV2 held-out videos become a standing test alongside VarroaDataset test.
 
 Good on BEEHIVE's own cameras. Says nothing yet about phone footage of a comb, which is
 the domain that matters; that needs own recordings (roadmap item 2).
+
+### Run 2: BEEHIVE + Hofer comb photos, validated on the comb photos (2026-10-04)
+
+The Hofer Roboflow project holds 233 unique phone-style photos of combs and hive
+scenes with bee boxes (20 to 77 bees on the dense ones, a bee about 65 px at 640 px),
+split 160 / 31 / 42. Box level:
+
+| model | Hofer comb test, 640 | Hofer comb test, 1024 | BEEHIVE test, 640 |
+|---|---|---|---|
+| BEEHIVE only (run 1) | mAP50 0.008 | 0.005 | 0.950 |
+| BEEHIVE + Hofer (run 2) | mAP50 0.304, P 0.48, R 0.31 | 0.315, P 0.59, R 0.29 | 0.952 |
+
+The in-hive cameras transfer nothing to a phone looking at a comb; 160 comb photos
+bring the detector to a weak but real 0.30. Dense combs with partly labelled bees and
+Roboflow's 640 x 640 stretch both cap this; the 1024 px run and tiled inference
+(`pipeline/tiled.py`) address the scale half. The data half needs more comb photos.
